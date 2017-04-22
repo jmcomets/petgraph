@@ -56,8 +56,6 @@ use std::collections::{
 use std::hash::{Hash, BuildHasher};
 
 use prelude::{Graph, Direction};
-#[cfg(feature = "stable_graph")]
-use prelude::StableGraph;
 use graph::{NodeIndex};
 use super::{
     graph,
@@ -67,8 +65,6 @@ use super::{
 use graph::{
     IndexType,
 };
-#[cfg(feature = "stable_graph")]
-use stable_graph;
 use graph::Frozen;
 
 trait_template!{
@@ -97,18 +93,6 @@ impl<'a, G> GraphBase for Frozen<'a, G> where G: GraphBase {
     type NodeId = G::NodeId;
     type EdgeId = G::EdgeId;
 }
-
-#[cfg(feature = "stable_graph")]
-impl<'a, N, E: 'a, Ty, Ix> IntoNeighbors for &'a StableGraph<N, E, Ty, Ix>
-    where Ty: EdgeType,
-          Ix: IndexType,
-{
-    type Neighbors = stable_graph::Neighbors<'a, E, Ix>;
-    fn neighbors(self, n: Self::NodeId) -> Self::Neighbors {
-        (*self).neighbors(n)
-    }
-}
-
 
 trait_template! {
 /// Access to the neighbors of each node
@@ -170,19 +154,6 @@ impl<'a, N, E: 'a, Ty, Ix> IntoNeighborsDirected for &'a Graph<N, E, Ty, Ix>
     }
 }
 
-#[cfg(feature = "stable_graph")]
-impl<'a, N, E: 'a, Ty, Ix> IntoNeighborsDirected for &'a StableGraph<N, E, Ty, Ix>
-    where Ty: EdgeType,
-          Ix: IndexType,
-{
-    type NeighborsDirected = stable_graph::Neighbors<'a, E, Ix>;
-    fn neighbors_directed(self, n: graph::NodeIndex<Ix>, d: Direction)
-        -> Self::NeighborsDirected
-    {
-        StableGraph::neighbors_directed(self, n, d)
-    }
-}
-
 trait_template! {
 /// Access to the edges of each node.
 ///
@@ -229,27 +200,6 @@ impl<'a, N, E: 'a, Ty, Ix> IntoNodeIdentifiers for &'a Graph<N, E, Ty, Ix>
 }
 
 impl<N, E, Ty, Ix> NodeCount for Graph<N, E, Ty, Ix>
-    where Ty: EdgeType,
-          Ix: IndexType,
-{
-    fn node_count(&self) -> usize {
-        self.node_count()
-    }
-}
-
-#[cfg(feature = "stable_graph")]
-impl<'a, N, E: 'a, Ty, Ix> IntoNodeIdentifiers for &'a StableGraph<N, E, Ty, Ix>
-    where Ty: EdgeType,
-          Ix: IndexType,
-{
-    type NodeIdentifiers = stable_graph::NodeIndices<'a, N, Ix>;
-    fn node_identifiers(self) -> Self::NodeIdentifiers {
-        StableGraph::node_indices(self)
-    }
-}
-
-#[cfg(feature = "stable_graph")]
-impl<N, E, Ty, Ix> NodeCount for StableGraph<N, E, Ty, Ix>
     where Ty: EdgeType,
           Ix: IndexType,
 {
@@ -381,15 +331,6 @@ impl<N, E, Ty, Ix> GraphProp for Graph<N, E, Ty, Ix>
 {
     type EdgeType = Ty;
 }
-
-#[cfg(feature = "stable_graph")]
-impl<N, E, Ty, Ix> GraphProp for StableGraph<N, E, Ty, Ix>
-    where Ty: EdgeType,
-          Ix: IndexType,
-{
-    type EdgeType = Ty;
-}
-
 
 impl<'a, N: 'a, E: 'a, Ty, Ix> IntoEdgeReferences for &'a Graph<N, E, Ty, Ix>
     where Ty: EdgeType,
@@ -544,39 +485,6 @@ impl<N, E, Ty, Ix> Visitable for Graph<N, E, Ty, Ix>
     }
 }
 
-#[cfg(feature = "stable_graph")]
-impl<N, E, Ty, Ix> GraphBase for StableGraph<N, E, Ty, Ix>
-    where Ix: IndexType,
-{
-    type NodeId = graph::NodeIndex<Ix>;
-    type EdgeId = graph::EdgeIndex<Ix>;
-}
-
-#[cfg(feature = "stable_graph")]
-impl<N, E, Ty, Ix> Visitable for StableGraph<N, E, Ty, Ix>
-    where Ty: EdgeType,
-          Ix: IndexType,
-{
-    type Map = FixedBitSet;
-    fn visit_map(&self) -> FixedBitSet {
-        FixedBitSet::with_capacity(self.node_bound())
-    }
-    fn reset_map(&self, map: &mut Self::Map) {
-        map.clear();
-        map.grow(self.node_bound());
-    }
-}
-
-#[cfg(feature = "stable_graph")]
-impl<N, E, Ty, Ix> Data for StableGraph<N, E, Ty, Ix>
-    where Ty: EdgeType,
-          Ix: IndexType,
-{
-    type NodeWeight = N;
-    type EdgeWeight = E;
-}
-
-
 trait_template! {
 /// Create or access the adjacency matrix of a graph.
 ///
@@ -595,7 +503,6 @@ pub trait GetAdjacencyMatrix : GraphBase {
     fn is_adjacent(&self, matrix: &Self::AdjMatrix, a: Self::NodeId, b: Self::NodeId) -> bool;
 }
 }
-
 
 GetAdjacencyMatrix!{delegate_impl []}
 

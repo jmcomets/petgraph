@@ -12,36 +12,55 @@ use std::mem::size_of;
 use std::ops::{Index, IndexMut};
 use std::slice;
 
+use fixedbitset::FixedBitSet;
+
 use {
-    Graph,
-    EdgeType,
     Directed,
-    Undirected,
     Direction,
+    EdgeType,
+    Graph,
     Incoming,
+    IntoWeightedEdge,
     Outgoing,
+    Undirected,
 };
 
 use iter_format::{
+    DebugMap,
     IterFormatExt,
     NoPretty,
-    DebugMap,
 };
 
 use super::{
-    Edge,
-    index_twice,
-    Node,
     DIRECTIONS,
-    Pair,
+    Edge,
     Frozen,
+    Node,
+    Pair,
+    index_twice,
 };
-use IntoWeightedEdge;
+
 use visit::{
+    Data,
     EdgeRef,
-    IntoEdges,
+    GetAdjacencyMatrix,
+    GraphBase,
+    GraphProp,
     IntoEdgeReferences,
+    IntoEdges,
+    IntoNeighbors,
+    IntoNeighborsDirected,
+    IntoNodeIdentifiers,
+    NodeCount,
     NodeIndexable,
+    Visitable,
+};
+
+use data::{
+    Build,
+    Create,
+    DataMap,
+    DataMapMut,
 };
 
 // reexport those things that are shared with Graph
@@ -1095,79 +1114,247 @@ impl<N, E, Ty, Ix> NodeIndexable for StableGraph<N, E, Ty, Ix>
     fn from_index(&self, ix: usize) -> Self::NodeId { NodeIndex::new(ix) }
 }
 
+/// The adjacency matrix for **Graph** is a bitmap that's computed by
+/// `.adjacency_matrix()`.
+impl<N, E, Ty, Ix> GetAdjacencyMatrix for StableGraph<N, E, Ty, Ix> where
+    Ty: EdgeType,
+    Ix: IndexType,
+{
+    type AdjMatrix = FixedBitSet;
 
-#[test]
-fn stable_graph() {
-    let mut gr = StableGraph::<_, _>::with_capacity(0, 0);
-    let a = gr.add_node(0);
-    let b = gr.add_node(1);
-    let c = gr.add_node(2);
-    let _ed = gr.add_edge(a, b, 1);
-    println!("{:?}", gr);
-    gr.remove_node(b);
-    println!("{:?}", gr);
-    let d = gr.add_node(3);
-    println!("{:?}", gr);
-    gr.remove_node(a);
-    gr.remove_node(c);
-    println!("{:?}", gr);
-    gr.add_edge(d, d, 2);
-    println!("{:?}", gr);
+    fn adjacency_matrix(&self) -> FixedBitSet
+    {
+        let n = self.node_bound();
+        let mut matrix = FixedBitSet::with_capacity(n * n);
+        for edge in self.edge_references() {
+            let i = edge.source().index() * n + edge.target().index();
+            matrix.put(i);
+            if !self.is_directed() {
+                let j = edge.source().index() + n * edge.target().index();
+                matrix.put(j);
+            }
+        }
+        matrix
+    }
 
-    let e = gr.add_node(4);
-    gr.add_edge(d, e, 3);
-    println!("{:?}", gr);
-    for neigh in gr.neighbors(d) {
-        println!("edge {:?} -> {:?}", d, neigh);
+    fn is_adjacent(&self, matrix: &FixedBitSet, a: NodeIndex<Ix>, b: NodeIndex<Ix>) -> bool
+    {
+        let n = self.node_count();
+        let index = n * a.index() + b.index();
+        matrix.contains(index)
     }
 }
 
-#[test]
-fn dfs() {
-    use visit::Dfs;
-
-    let mut gr = StableGraph::<_, _>::with_capacity(0, 0);
-    let a = gr.add_node("a");
-    let b = gr.add_node("b");
-    let c = gr.add_node("c");
-    let d = gr.add_node("d");
-    gr.add_edge(a, b, 1);
-    gr.add_edge(a, c, 2);
-    gr.add_edge(b, c, 3);
-    gr.add_edge(b, d, 4);
-    gr.add_edge(c, d, 5);
-    gr.add_edge(d, b, 6);
-    gr.add_edge(c, b, 7);
-    println!("{:?}", gr);
-
-    let mut dfs = Dfs::new(&gr, a);
-    while let Some(next) = dfs.next(&gr) {
-        println!("dfs visit => {:?}, weight={:?}", next, &gr[next]);
+impl<'a, N, E: 'a, Ty, Ix> IntoNeighbors for &'a StableGraph<N, E, Ty, Ix>
+    where Ty: EdgeType,
+          Ix: IndexType,
+{
+    type Neighbors = Neighbors<'a, E, Ix>;
+    fn neighbors(self, n: Self::NodeId) -> Self::Neighbors {
+        (*self).neighbors(n)
     }
 }
 
-#[test]
-fn test_retain_nodes() {
-    let mut gr = StableGraph::<_, _>::with_capacity(6, 6);
-    let a = gr.add_node("a");
-    let f = gr.add_node("f");
-    let b = gr.add_node("b");
-    let c = gr.add_node("c");
-    let d = gr.add_node("d");
-    let e = gr.add_node("e");
-    gr.add_edge(a, b, 1);
-    gr.add_edge(a, c, 2);
-    gr.add_edge(b, c, 3);
-    gr.add_edge(b, d, 4);
-    gr.add_edge(c, d, 5);
-    gr.add_edge(d, b, 6);
-    gr.add_edge(c, b, 7);
-    gr.add_edge(d, e, 8);
-    gr.remove_node(f);
+impl<'a, N, E: 'a, Ty, Ix> IntoNeighborsDirected for &'a StableGraph<N, E, Ty, Ix>
+    where Ty: EdgeType,
+          Ix: IndexType,
+{
+    type NeighborsDirected = Neighbors<'a, E, Ix>;
+    fn neighbors_directed(self, n: NodeIndex<Ix>, d: Direction)
+        -> Self::NeighborsDirected
+    {
+        StableGraph::neighbors_directed(self, n, d)
+    }
+}
 
-    assert_eq!(gr.node_count(), 5);
-    assert_eq!(gr.edge_count(), 8);
-    gr.retain_nodes(|frozen_gr, ix| {frozen_gr[ix] >= "c"});
-    assert_eq!(gr.node_count(), 3);
-    assert_eq!(gr.edge_count(), 2);
+impl<'a, N, E: 'a, Ty, Ix> IntoNodeIdentifiers for &'a StableGraph<N, E, Ty, Ix>
+    where Ty: EdgeType,
+          Ix: IndexType,
+{
+    type NodeIdentifiers = NodeIndices<'a, N, Ix>;
+    fn node_identifiers(self) -> Self::NodeIdentifiers {
+        StableGraph::node_indices(self)
+    }
+}
+
+impl<N, E, Ty, Ix> NodeCount for StableGraph<N, E, Ty, Ix>
+    where Ty: EdgeType,
+          Ix: IndexType,
+{
+    fn node_count(&self) -> usize {
+        self.node_count()
+    }
+}
+
+impl<N, E, Ty, Ix> GraphProp for StableGraph<N, E, Ty, Ix>
+    where Ty: EdgeType,
+          Ix: IndexType,
+{
+    type EdgeType = Ty;
+}
+
+impl<N, E, Ty, Ix> GraphBase for StableGraph<N, E, Ty, Ix>
+    where Ix: IndexType,
+{
+    type NodeId = NodeIndex<Ix>;
+    type EdgeId = EdgeIndex<Ix>;
+}
+
+impl<N, E, Ty, Ix> Visitable for StableGraph<N, E, Ty, Ix>
+    where Ty: EdgeType,
+          Ix: IndexType,
+{
+    type Map = FixedBitSet;
+    fn visit_map(&self) -> FixedBitSet {
+        FixedBitSet::with_capacity(self.node_bound())
+    }
+    fn reset_map(&self, map: &mut Self::Map) {
+        map.clear();
+        map.grow(self.node_bound());
+    }
+}
+
+impl<N, E, Ty, Ix> Data for StableGraph<N, E, Ty, Ix>
+    where Ty: EdgeType,
+          Ix: IndexType,
+{
+    type NodeWeight = N;
+    type EdgeWeight = E;
+}
+
+impl<N, E, Ty, Ix> DataMap for StableGraph<N, E, Ty, Ix>
+    where Ty: EdgeType,
+          Ix: IndexType
+{
+    fn node_weight(&self, id: Self::NodeId) -> Option<&Self::NodeWeight> {
+        self.node_weight(id)
+    }
+    fn edge_weight(&self, id: Self::EdgeId) -> Option<&Self::EdgeWeight> {
+        self.edge_weight(id)
+    }
+}
+
+impl<N, E, Ty, Ix> DataMapMut for StableGraph<N, E, Ty, Ix>
+    where Ty: EdgeType,
+          Ix: IndexType
+{
+    fn node_weight_mut(&mut self, id: Self::NodeId) -> Option<&mut Self::NodeWeight> {
+        self.node_weight_mut(id)
+    }
+    fn edge_weight_mut(&mut self, id: Self::EdgeId) -> Option<&mut Self::EdgeWeight> {
+        self.edge_weight_mut(id)
+    }
+}
+
+impl<N, E, Ty, Ix> Build for StableGraph<N, E, Ty, Ix>
+    where Ty: EdgeType,
+          Ix: IndexType,
+{
+    fn add_node(&mut self, weight: Self::NodeWeight) -> Self::NodeId {
+        self.add_node(weight)
+    }
+    fn add_edge(&mut self,
+                a: Self::NodeId,
+                b: Self::NodeId,
+                weight: Self::EdgeWeight) -> Option<Self::EdgeId>
+    {
+        Some(self.add_edge(a, b, weight))
+    }
+    fn update_edge(&mut self,
+                   a: Self::NodeId,
+                   b: Self::NodeId,
+                   weight: Self::EdgeWeight) -> Self::EdgeId
+    {
+        self.update_edge(a, b, weight)
+    }
+}
+
+impl<N, E, Ty, Ix> Create for StableGraph<N, E, Ty, Ix>
+    where Ty: EdgeType,
+          Ix: IndexType,
+{
+    fn with_capacity(nodes: usize, edges: usize) -> Self {
+        Self::with_capacity(nodes, edges)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn stable_graph() {
+        let mut gr = StableGraph::<_, _>::with_capacity(0, 0);
+        let a = gr.add_node(0);
+        let b = gr.add_node(1);
+        let c = gr.add_node(2);
+        let _ed = gr.add_edge(a, b, 1);
+        println!("{:?}", gr);
+        gr.remove_node(b);
+        println!("{:?}", gr);
+        let d = gr.add_node(3);
+        println!("{:?}", gr);
+        gr.remove_node(a);
+        gr.remove_node(c);
+        println!("{:?}", gr);
+        gr.add_edge(d, d, 2);
+        println!("{:?}", gr);
+
+        let e = gr.add_node(4);
+        gr.add_edge(d, e, 3);
+        println!("{:?}", gr);
+        for neigh in gr.neighbors(d) {
+            println!("edge {:?} -> {:?}", d, neigh);
+        }
+    }
+
+    #[test]
+    fn dfs() {
+        use visit::Dfs;
+
+        let mut gr = StableGraph::<_, _>::with_capacity(0, 0);
+        let a = gr.add_node("a");
+        let b = gr.add_node("b");
+        let c = gr.add_node("c");
+        let d = gr.add_node("d");
+        gr.add_edge(a, b, 1);
+        gr.add_edge(a, c, 2);
+        gr.add_edge(b, c, 3);
+        gr.add_edge(b, d, 4);
+        gr.add_edge(c, d, 5);
+        gr.add_edge(d, b, 6);
+        gr.add_edge(c, b, 7);
+        println!("{:?}", gr);
+
+        let mut dfs = Dfs::new(&gr, a);
+        while let Some(next) = dfs.next(&gr) {
+            println!("dfs visit => {:?}, weight={:?}", next, &gr[next]);
+        }
+    }
+
+    #[test]
+    fn test_retain_nodes() {
+        let mut gr = StableGraph::<_, _>::with_capacity(6, 6);
+        let a = gr.add_node("a");
+        let f = gr.add_node("f");
+        let b = gr.add_node("b");
+        let c = gr.add_node("c");
+        let d = gr.add_node("d");
+        let e = gr.add_node("e");
+        gr.add_edge(a, b, 1);
+        gr.add_edge(a, c, 2);
+        gr.add_edge(b, c, 3);
+        gr.add_edge(b, d, 4);
+        gr.add_edge(c, d, 5);
+        gr.add_edge(d, b, 6);
+        gr.add_edge(c, b, 7);
+        gr.add_edge(d, e, 8);
+        gr.remove_node(f);
+
+        assert_eq!(gr.node_count(), 5);
+        assert_eq!(gr.edge_count(), 8);
+        gr.retain_nodes(|frozen_gr, ix| {frozen_gr[ix] >= "c"});
+        assert_eq!(gr.node_count(), 3);
+        assert_eq!(gr.edge_count(), 2);
+    }
 }

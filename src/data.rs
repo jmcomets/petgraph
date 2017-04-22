@@ -1,13 +1,11 @@
 //! Graph traits for associated data and graph construction.
 
+use EdgeType;
 
-use Graph;
-#[cfg(feature = "stable_graph")]
-use stable_graph::StableGraph;
-use ::{
-    EdgeType,
+use graph::{
+    Graph,
+    IndexType,
 };
-use graph::IndexType;
 
 use visit::{
     Data,
@@ -100,32 +98,6 @@ impl<N, E, Ty, Ix> DataMapMut for Graph<N, E, Ty, Ix>
     }
 }
 
-#[cfg(feature = "stable_graph")]
-impl<N, E, Ty, Ix> DataMap for StableGraph<N, E, Ty, Ix>
-    where Ty: EdgeType,
-          Ix: IndexType
-{
-    fn node_weight(&self, id: Self::NodeId) -> Option<&Self::NodeWeight> {
-        self.node_weight(id)
-    }
-    fn edge_weight(&self, id: Self::EdgeId) -> Option<&Self::EdgeWeight> {
-        self.edge_weight(id)
-    }
-}
-
-#[cfg(feature = "stable_graph")]
-impl<N, E, Ty, Ix> DataMapMut for StableGraph<N, E, Ty, Ix>
-    where Ty: EdgeType,
-          Ix: IndexType
-{
-    fn node_weight_mut(&mut self, id: Self::NodeId) -> Option<&mut Self::NodeWeight> {
-        self.node_weight_mut(id)
-    }
-    fn edge_weight_mut(&mut self, id: Self::EdgeId) -> Option<&mut Self::EdgeWeight> {
-        self.edge_weight_mut(id)
-    }
-}
-
 impl<N, E, Ty, Ix> Build for Graph<N, E, Ty, Ix>
     where Ty: EdgeType,
           Ix: IndexType,
@@ -149,41 +121,7 @@ impl<N, E, Ty, Ix> Build for Graph<N, E, Ty, Ix>
     }
 }
 
-#[cfg(feature = "stable_graph")]
-impl<N, E, Ty, Ix> Build for StableGraph<N, E, Ty, Ix>
-    where Ty: EdgeType,
-          Ix: IndexType,
-{
-    fn add_node(&mut self, weight: Self::NodeWeight) -> Self::NodeId {
-        self.add_node(weight)
-    }
-    fn add_edge(&mut self,
-                a: Self::NodeId,
-                b: Self::NodeId,
-                weight: Self::EdgeWeight) -> Option<Self::EdgeId>
-    {
-        Some(self.add_edge(a, b, weight))
-    }
-    fn update_edge(&mut self,
-                   a: Self::NodeId,
-                   b: Self::NodeId,
-                   weight: Self::EdgeWeight) -> Self::EdgeId
-    {
-        self.update_edge(a, b, weight)
-    }
-}
-
 impl<N, E, Ty, Ix> Create for Graph<N, E, Ty, Ix>
-    where Ty: EdgeType,
-          Ix: IndexType,
-{
-    fn with_capacity(nodes: usize, edges: usize) -> Self {
-        Self::with_capacity(nodes, edges)
-    }
-}
-
-#[cfg(feature = "stable_graph")]
-impl<N, E, Ty, Ix> Create for StableGraph<N, E, Ty, Ix>
     where Ty: EdgeType,
           Ix: IndexType,
 {
