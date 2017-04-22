@@ -5,7 +5,7 @@ extern crate itertools;
 #[macro_use] extern crate defmac;
 
 use petgraph::prelude::*;
-use petgraph::stable_graph::node_index as n;
+use petgraph::node_index as n;
 use petgraph::EdgeType;
 use petgraph::algo::{kosaraju_scc, tarjan_scc};
 use petgraph::visit::{

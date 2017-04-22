@@ -4,8 +4,11 @@ use std::collections::HashSet;
 use std::hash::Hash;
 
 use petgraph::prelude::*;
+
 use petgraph::{
     EdgeType,
+    IndexType,
+    node_index as n,
 };
 
 use petgraph as pg;
@@ -16,11 +19,6 @@ use petgraph::algo::{
     is_cyclic_undirected,
     min_spanning_tree,
     is_isomorphic_matching,
-};
-
-use petgraph::graph::node_index as n;
-use petgraph::graph::{
-    IndexType,
 };
 
 use petgraph::visit::{

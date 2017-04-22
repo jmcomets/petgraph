@@ -13,6 +13,7 @@ use prelude::*;
 
 use super::{
     EdgeType,
+    IndexType,
 };
 use scored::MinScored;
 use super::visit::{
@@ -30,9 +31,6 @@ use super::visit::{
     Reversed,
 };
 use super::unionfind::UnionFind;
-use super::graph::{
-    IndexType,
-};
 use visit::{Data, NodeRef, IntoNodeReferences};
 use data::{
     Element,

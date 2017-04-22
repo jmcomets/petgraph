@@ -3,12 +3,12 @@ use fixedbitset::FixedBitSet;
 
 use {
     EdgeType,
+    IndexType,
+    NodeIndex,
 };
 
 use graph::{
     Graph,
-    IndexType,
-    NodeIndex,
 };
 
 use visit::{

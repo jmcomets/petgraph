@@ -1,17 +1,16 @@
 use std::marker;
 use fixedbitset::FixedBitSet;
 
-use super::{
+use {
     EdgeType,
     Incoming,
-};
-use super::graph::{
-    Graph,
     IndexType,
     NodeIndex,
 };
 
-use super::visit::GetAdjacencyMatrix;
+use graph::Graph;
+
+use visit::GetAdjacencyMatrix;
 
 #[derive(Debug)]
 struct Vf2State<Ty, Ix> {

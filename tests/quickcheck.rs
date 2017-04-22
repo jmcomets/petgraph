@@ -17,7 +17,10 @@ use rand::Rng;
 
 use petgraph::prelude::*;
 use petgraph::{
-    EdgeType, 
+    EdgeType,
+    IndexType,
+    node_index,
+    edge_index
 };
 use petgraph::dot::{Dot, Config};
 use petgraph::algo::{
@@ -35,7 +38,6 @@ use petgraph::algo::{
 };
 use petgraph::visit::{Topo, Reversed};
 use petgraph::data::FromElements;
-use petgraph::graph::{IndexType, node_index, edge_index};
 use petgraph::graphmap::{
     NodeTrait,
 };

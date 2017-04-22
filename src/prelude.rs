@@ -8,8 +8,6 @@
 #[doc(no_inline)]
 pub use graph::{
     Graph,
-    NodeIndex,
-    EdgeIndex,
     DiGraph,
     UnGraph,
 };
@@ -40,6 +38,8 @@ pub use ::{
     Outgoing,
     Directed,
     Undirected,
+    NodeIndex,
+    EdgeIndex,
 };
 
 #[doc(no_inline)]

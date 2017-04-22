@@ -110,7 +110,7 @@ impl<B> Default for Control<B> {
 ///
 /// ```
 /// use petgraph::prelude::*;
-/// use petgraph::graph::node_index as n;
+/// use petgraph::node_index as n;
 /// use petgraph::visit::depth_first_search;
 /// use petgraph::visit::{DfsEvent, Control};
 ///

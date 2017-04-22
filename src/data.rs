@@ -1,11 +1,11 @@
 //! Graph traits for associated data and graph construction.
 
-use EdgeType;
-
-use graph::{
-    Graph,
+use {
+    EdgeType,
     IndexType,
 };
+
+use graph::Graph;
 
 use visit::{
     Data,

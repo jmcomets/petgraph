@@ -13,10 +13,9 @@ use visit::{Data, IntoEdgeReferences, NodeCount, GraphProp};
 
 use util::zip;
 
-#[doc(no_inline)]
-pub use graph::{IndexType, DefaultIx};
-
 use {
+    IndexType,
+    DefaultIx,
     EdgeType,
     Directed,
     IntoWeightedEdge,

@@ -23,6 +23,13 @@ use {
     IntoWeightedEdge,
     Outgoing,
     Undirected,
+    NodeIndex,
+    EdgeIndex,
+    IndexType,
+    DefaultIx,
+    node_index,
+    edge_index,
+    DIRECTIONS,
 };
 
 use iter_format::{
@@ -32,7 +39,6 @@ use iter_format::{
 };
 
 use super::{
-    DIRECTIONS,
     Edge,
     Frozen,
     Node,
@@ -66,13 +72,7 @@ use data::{
 // reexport those things that are shared with Graph
 #[doc(no_inline)]
 pub use graph::{
-    NodeIndex,
-    EdgeIndex,
     GraphIndex,
-    IndexType,
-    DefaultIx,
-    node_index,
-    edge_index,
 };
 
 /// `StableGraph<N, E, Ty, Ix>` is a graph datastructure using an adjacency

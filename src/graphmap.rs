@@ -26,13 +26,15 @@ use ordermap::{
 };
 
 use {
-    EdgeType,
     Directed,
-    Undirected,
     Direction,
+    EdgeType,
+    IndexType,
     Incoming,
-    Outgoing,
     IntoWeightedEdge,
+    Outgoing,
+    Undirected,
+    node_index,
 };
 
 use visit::{
@@ -57,10 +59,7 @@ use data::{
     Create,
 };
 
-use graph::{
-    Graph,
-    node_index,
-};
+use graph::Graph;
 
 /// A `GraphMap` with undirected edges.
 ///
@@ -434,7 +433,7 @@ impl<N, E, Ty> GraphMap<N, E, Ty>
     /// with the `GraphMap`s node weights `N`. The node weights `N` are
     /// used as node weights in the resulting `Graph`, too.
     pub fn into_graph<Ix>(self) -> Graph<N, E, Ty, Ix>
-        where Ix: ::graph::IndexType,
+        where Ix: IndexType,
     {
         // assuming two successive iterations of the same hashmap produce the same order
         let mut gr = Graph::with_capacity(self.node_count(), self.edge_count());

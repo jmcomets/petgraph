@@ -56,16 +56,14 @@ use std::collections::{
 use std::hash::{Hash, BuildHasher};
 
 use prelude::{Graph, Direction};
-use graph::{NodeIndex};
-use super::{
-    graph,
+use {
     EdgeType,
+    IndexType,
+    NodeIndex,
+    EdgeIndex,
 };
 
-use graph::{
-    IndexType,
-};
-use graph::Frozen;
+use graph;
 
 trait_template!{
 /// Base graph trait: defines the associated node identifier and
@@ -89,7 +87,7 @@ pub trait GraphRef : Copy + GraphBase { }
 
 impl<'a, G> GraphRef for &'a G where G: GraphBase { }
 
-impl<'a, G> GraphBase for Frozen<'a, G> where G: GraphBase {
+impl<'a, G> GraphBase for graph::Frozen<'a, G> where G: GraphBase {
     type NodeId = G::NodeId;
     type EdgeId = G::EdgeId;
 }
@@ -135,8 +133,7 @@ impl<'a, N, E: 'a, Ty, Ix> IntoNeighbors for &'a Graph<N, E, Ty, Ix>
           Ix: IndexType,
 {
     type Neighbors = graph::Neighbors<'a, E, Ix>;
-    fn neighbors(self, n: graph::NodeIndex<Ix>)
-        -> graph::Neighbors<'a, E, Ix>
+    fn neighbors(self, n: NodeIndex<Ix>) -> graph::Neighbors<'a, E, Ix>
     {
         Graph::neighbors(self, n)
     }
@@ -147,8 +144,7 @@ impl<'a, N, E: 'a, Ty, Ix> IntoNeighborsDirected for &'a Graph<N, E, Ty, Ix>
           Ix: IndexType,
 {
     type NeighborsDirected = graph::Neighbors<'a, E, Ix>;
-    fn neighbors_directed(self, n: graph::NodeIndex<Ix>, d: Direction)
-        -> graph::Neighbors<'a, E, Ix>
+    fn neighbors_directed(self, n: NodeIndex<Ix>, d: Direction) -> graph::Neighbors<'a, E, Ix>
     {
         Graph::neighbors_directed(self, n, d)
     }
@@ -405,24 +401,24 @@ pub trait VisitMap<N> {
     fn is_visited(&self, a: &N) -> bool;
 }
 
-impl<Ix> VisitMap<graph::NodeIndex<Ix>> for FixedBitSet
+impl<Ix> VisitMap<NodeIndex<Ix>> for FixedBitSet
     where Ix: IndexType,
 {
-    fn visit(&mut self, x: graph::NodeIndex<Ix>) -> bool {
+    fn visit(&mut self, x: NodeIndex<Ix>) -> bool {
         !self.put(x.index())
     }
-    fn is_visited(&self, x: &graph::NodeIndex<Ix>) -> bool {
+    fn is_visited(&self, x: &NodeIndex<Ix>) -> bool {
         self.contains(x.index())
     }
 }
 
-impl<Ix> VisitMap<graph::EdgeIndex<Ix>> for FixedBitSet
+impl<Ix> VisitMap<EdgeIndex<Ix>> for FixedBitSet
     where Ix: IndexType,
 {
-    fn visit(&mut self, x: graph::EdgeIndex<Ix>) -> bool {
+    fn visit(&mut self, x: EdgeIndex<Ix>) -> bool {
         !self.put(x.index())
     }
-    fn is_visited(&self, x: &graph::EdgeIndex<Ix>) -> bool {
+    fn is_visited(&self, x: &EdgeIndex<Ix>) -> bool {
         self.contains(x.index())
     }
 }
@@ -468,8 +464,8 @@ Visitable!{delegate_impl []}
 impl<N, E, Ty, Ix> GraphBase for Graph<N, E, Ty, Ix>
     where Ix: IndexType,
 {
-    type NodeId = graph::NodeIndex<Ix>;
-    type EdgeId = graph::EdgeIndex<Ix>;
+    type NodeId = NodeIndex<Ix>;
+    type EdgeId = EdgeIndex<Ix>;
 }
 
 impl<N, E, Ty, Ix> Visitable for Graph<N, E, Ty, Ix>

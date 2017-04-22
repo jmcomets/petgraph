@@ -3,8 +3,6 @@ extern crate petgraph;
 use petgraph::prelude::*;
 use petgraph::{
     EdgeType,
-};
-use petgraph::graph::{
     node_index,
     edge_index,
 };

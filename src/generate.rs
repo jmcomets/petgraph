@@ -3,8 +3,7 @@
 //! ***Unstable: API may change at any time.*** Depends on `feature = "generate"`.
 //!
 
-use {Graph, Directed, EdgeType};
-use graph::NodeIndex;
+use {Graph, NodeIndex, Directed, EdgeType};
 
 // A DAG has the property that the adjacency matrix is lower triangular,
 // diagonal zero.
