@@ -56,8 +56,6 @@ use std::collections::{
 use std::hash::{Hash, BuildHasher};
 
 use prelude::{Graph, Direction};
-#[cfg(feature = "graphmap")]
-use prelude::GraphMap;
 #[cfg(feature = "stable_graph")]
 use prelude::StableGraph;
 use graph::{NodeIndex};
@@ -72,12 +70,6 @@ use graph::{
 #[cfg(feature = "stable_graph")]
 use stable_graph;
 use graph::Frozen;
-
-#[cfg(feature = "graphmap")]
-use graphmap::{
-    self,
-    NodeTrait,
-};
 
 trait_template!{
 /// Base graph trait: defines the associated node identifier and
@@ -114,18 +106,6 @@ impl<'a, N, E: 'a, Ty, Ix> IntoNeighbors for &'a StableGraph<N, E, Ty, Ix>
     type Neighbors = stable_graph::Neighbors<'a, E, Ix>;
     fn neighbors(self, n: Self::NodeId) -> Self::Neighbors {
         (*self).neighbors(n)
-    }
-}
-
-
-#[cfg(feature = "graphmap")]
-impl<'a, N: 'a, E, Ty> IntoNeighbors for &'a GraphMap<N, E, Ty>
-    where N: Copy + Ord + Hash,
-          Ty: EdgeType,
-{
-    type Neighbors = graphmap::Neighbors<'a, N, Ty>;
-    fn neighbors(self, n: Self::NodeId) -> Self::Neighbors {
-        self.neighbors(n)
     }
 }
 
@@ -200,19 +180,6 @@ impl<'a, N, E: 'a, Ty, Ix> IntoNeighborsDirected for &'a StableGraph<N, E, Ty, I
         -> Self::NeighborsDirected
     {
         StableGraph::neighbors_directed(self, n, d)
-    }
-}
-
-#[cfg(feature = "graphmap")]
-impl<'a, N: 'a, E, Ty> IntoNeighborsDirected for &'a GraphMap<N, E, Ty>
-    where N: Copy + Ord + Hash,
-          Ty: EdgeType,
-{
-    type NeighborsDirected = graphmap::NeighborsDirected<'a, N, Ty>;
-    fn neighbors_directed(self, n: N, dir: Direction)
-        -> Self::NeighborsDirected
-    {
-        self.neighbors_directed(n, dir)
     }
 }
 
@@ -392,15 +359,6 @@ pub trait IntoEdgeReferences : Data + GraphRef {
 
 IntoEdgeReferences!{delegate_impl [] }
 
-#[cfg(feature = "graphmap")]
-impl<N, E, Ty> Data for GraphMap<N, E, Ty>
-    where N: Copy + PartialEq,
-          Ty: EdgeType,
-{
-    type NodeWeight = N;
-    type EdgeWeight = E;
-}
-
 trait_template! {
     /// Edge kind property (directed or undirected edges)
 pub trait GraphProp : GraphBase {
@@ -428,14 +386,6 @@ impl<N, E, Ty, Ix> GraphProp for Graph<N, E, Ty, Ix>
 impl<N, E, Ty, Ix> GraphProp for StableGraph<N, E, Ty, Ix>
     where Ty: EdgeType,
           Ix: IndexType,
-{
-    type EdgeType = Ty;
-}
-
-#[cfg(feature = "graphmap")]
-impl<N, E, Ty> GraphProp for GraphMap<N, E, Ty>
-    where N: NodeTrait,
-          Ty: EdgeType,
 {
     type EdgeType = Ty;
 }
@@ -627,26 +577,6 @@ impl<N, E, Ty, Ix> Data for StableGraph<N, E, Ty, Ix>
 }
 
 
-#[cfg(feature = "graphmap")]
-impl<N, E, Ty> GraphBase for GraphMap<N, E, Ty>
-    where N: Copy + PartialEq,
-{
-    type NodeId = N;
-    type EdgeId = (N, N);
-}
-
-#[cfg(feature = "graphmap")]
-impl<N, E, Ty> Visitable for GraphMap<N, E, Ty>
-    where N: Copy + Ord + Hash,
-          Ty: EdgeType,
-{
-    type Map = HashSet<N>;
-    fn visit_map(&self) -> HashSet<N> { HashSet::with_capacity(self.node_count()) }
-    fn reset_map(&self, map: &mut Self::Map) {
-        map.clear();
-    }
-}
-
 trait_template! {
 /// Create or access the adjacency matrix of a graph.
 ///
@@ -668,21 +598,6 @@ pub trait GetAdjacencyMatrix : GraphBase {
 
 
 GetAdjacencyMatrix!{delegate_impl []}
-
-#[cfg(feature = "graphmap")]
-/// The `GraphMap` keeps an adjacency matrix internally.
-impl<N, E, Ty> GetAdjacencyMatrix for GraphMap<N, E, Ty>
-    where N: Copy + Ord + Hash,
-          Ty: EdgeType,
-{
-    type AdjMatrix = ();
-    #[inline]
-    fn adjacency_matrix(&self) { }
-    #[inline]
-    fn is_adjacent(&self, _: &(), a: N, b: N) -> bool {
-        self.contains_edge(a, b)
-    }
-}
 
 mod filter;
 mod reversed;

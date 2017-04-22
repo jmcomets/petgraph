@@ -8,8 +8,7 @@ use ::{
     EdgeType,
 };
 use graph::IndexType;
-#[cfg(feature = "graphmap")]
-use graphmap::{GraphMap, NodeTrait};
+
 use visit::{
     Data,
     NodeCount,
@@ -174,38 +173,6 @@ impl<N, E, Ty, Ix> Build for StableGraph<N, E, Ty, Ix>
     }
 }
 
-#[cfg(feature = "graphmap")]
-impl<N, E, Ty> Build for GraphMap<N, E, Ty>
-    where Ty: EdgeType,
-          N: NodeTrait,
-{
-    fn add_node(&mut self, weight: Self::NodeWeight) -> Self::NodeId {
-        self.add_node(weight)
-    }
-    fn add_edge(&mut self,
-                a: Self::NodeId,
-                b: Self::NodeId,
-                weight: Self::EdgeWeight) -> Option<Self::EdgeId>
-    {
-        if self.contains_edge(a, b) {
-            None
-        } else {
-            let r = self.add_edge(a, b, weight);
-            debug_assert!(r.is_none());
-            Some((a, b))
-        }
-    }
-    fn update_edge(&mut self,
-                   a: Self::NodeId,
-                   b: Self::NodeId,
-                   weight: Self::EdgeWeight) -> Self::EdgeId
-    {
-        self.add_edge(a, b, weight);
-        (a, b)
-    }
-}
-
-
 impl<N, E, Ty, Ix> Create for Graph<N, E, Ty, Ix>
     where Ty: EdgeType,
           Ix: IndexType,
@@ -219,16 +186,6 @@ impl<N, E, Ty, Ix> Create for Graph<N, E, Ty, Ix>
 impl<N, E, Ty, Ix> Create for StableGraph<N, E, Ty, Ix>
     where Ty: EdgeType,
           Ix: IndexType,
-{
-    fn with_capacity(nodes: usize, edges: usize) -> Self {
-        Self::with_capacity(nodes, edges)
-    }
-}
-
-#[cfg(feature = "graphmap")]
-impl<N, E, Ty> Create for GraphMap<N, E, Ty>
-    where Ty: EdgeType,
-          N: NodeTrait,
 {
     fn with_capacity(nodes: usize, edges: usize) -> Self {
         Self::with_capacity(nodes, edges)

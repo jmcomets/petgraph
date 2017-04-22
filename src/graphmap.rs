@@ -2,23 +2,28 @@
 //! keys.
 
 use std::cmp::Ordering;
-use std::hash::{self, Hash};
+
+use std::collections::HashSet;
+use std::hash::{Hasher, Hash};
+
 use std::iter::{
     Cloned,
     DoubleEndedIterator,
 };
-use std::slice::{
-    Iter,
-};
+
+use std::slice::Iter;
+
 use std::fmt;
 use std::ops::{Index, IndexMut, Deref};
 use std::iter::FromIterator;
 use std::marker::PhantomData;
-use ordermap::OrderMap;
+
 use ordermap::{
-    Iter as OrderMapIter, IterMut as OrderMapIterMut
+    Iter as OrderMapIter,
+    IterMut as OrderMapIterMut,
+    Keys,
+    OrderMap,
 };
-use ordermap::Keys;
 
 use {
     EdgeType,
@@ -27,13 +32,35 @@ use {
     Direction,
     Incoming,
     Outgoing,
+    IntoWeightedEdge,
 };
 
-use IntoWeightedEdge;
-use visit::{IntoNodeIdentifiers, NodeCount, IntoNodeReferences, NodeIndexable};
-use visit::{NodeCompactIndexable, IntoEdgeReferences, IntoEdges};
-use graph::Graph;
-use graph::node_index;
+use visit::{
+    GetAdjacencyMatrix,
+    IntoEdgeReferences,
+    IntoEdges,
+    IntoNodeIdentifiers,
+    IntoNodeReferences,
+    IntoNeighbors,
+    IntoNeighborsDirected,
+    NodeCompactIndexable,
+    NodeCount,
+    NodeIndexable,
+    Data,
+    GraphProp,
+    GraphBase,
+    Visitable,
+};
+
+use data::{
+    Build,
+    Create,
+};
+
+use graph::{
+    Graph,
+    node_index,
+};
 
 /// A `GraphMap` with undirected edges.
 ///
@@ -770,7 +797,7 @@ impl<'b, T> Eq for Ptr<'b, T> {}
 
 impl<'b, T> Hash for Ptr<'b, T>
 {
-    fn hash<H: hash::Hasher>(&self, st: &mut H)
+    fn hash<H: Hasher>(&self, st: &mut H)
     {
         let ptr = (self.0) as *const T;
         ptr.hash(st)
@@ -877,3 +904,109 @@ impl<N, E, Ty> NodeCompactIndexable for GraphMap<N, E, Ty>
 {
 }
 
+impl<'a, N: 'a, E, Ty> IntoNeighbors for &'a GraphMap<N, E, Ty>
+    where N: Copy + Ord + Hash,
+          Ty: EdgeType,
+{
+    type Neighbors = Neighbors<'a, N, Ty>;
+    fn neighbors(self, n: Self::NodeId) -> Self::Neighbors {
+        self.neighbors(n)
+    }
+}
+
+impl<'a, N: 'a, E, Ty> IntoNeighborsDirected for &'a GraphMap<N, E, Ty>
+    where N: Copy + Ord + Hash,
+          Ty: EdgeType,
+{
+    type NeighborsDirected = NeighborsDirected<'a, N, Ty>;
+    fn neighbors_directed(self, n: N, dir: Direction) -> Self::NeighborsDirected
+    {
+        self.neighbors_directed(n, dir)
+    }
+}
+
+impl<N, E, Ty> Data for GraphMap<N, E, Ty>
+    where N: Copy + PartialEq,
+          Ty: EdgeType,
+{
+    type NodeWeight = N;
+    type EdgeWeight = E;
+}
+
+impl<N, E, Ty> GraphProp for GraphMap<N, E, Ty>
+    where N: NodeTrait,
+          Ty: EdgeType,
+{
+    type EdgeType = Ty;
+}
+
+impl<N, E, Ty> GraphBase for GraphMap<N, E, Ty>
+    where N: Copy + PartialEq,
+{
+    type NodeId = N;
+    type EdgeId = (N, N);
+}
+
+impl<N, E, Ty> Visitable for GraphMap<N, E, Ty>
+    where N: Copy + Ord + Hash,
+          Ty: EdgeType,
+{
+    type Map = HashSet<N>;
+    fn visit_map(&self) -> HashSet<N> { HashSet::with_capacity(self.node_count()) }
+    fn reset_map(&self, map: &mut Self::Map) {
+        map.clear();
+    }
+}
+
+/// The `GraphMap` keeps an adjacency matrix internally.
+impl<N, E, Ty> GetAdjacencyMatrix for GraphMap<N, E, Ty>
+    where N: Copy + Ord + Hash,
+          Ty: EdgeType,
+{
+    type AdjMatrix = ();
+    #[inline]
+    fn adjacency_matrix(&self) { }
+    #[inline]
+    fn is_adjacent(&self, _: &(), a: N, b: N) -> bool {
+        self.contains_edge(a, b)
+    }
+}
+
+impl<N, E, Ty> Build for GraphMap<N, E, Ty>
+    where Ty: EdgeType,
+          N: NodeTrait,
+{
+    fn add_node(&mut self, weight: Self::NodeWeight) -> Self::NodeId {
+        self.add_node(weight)
+    }
+    fn add_edge(&mut self,
+                a: Self::NodeId,
+                b: Self::NodeId,
+                weight: Self::EdgeWeight) -> Option<Self::EdgeId>
+    {
+        if self.contains_edge(a, b) {
+            None
+        } else {
+            let r = self.add_edge(a, b, weight);
+            debug_assert!(r.is_none());
+            Some((a, b))
+        }
+    }
+    fn update_edge(&mut self,
+                   a: Self::NodeId,
+                   b: Self::NodeId,
+                   weight: Self::EdgeWeight) -> Self::EdgeId
+    {
+        self.add_edge(a, b, weight);
+        (a, b)
+    }
+}
+
+impl<N, E, Ty> Create for GraphMap<N, E, Ty>
+    where Ty: EdgeType,
+          N: NodeTrait,
+{
+    fn with_capacity(nodes: usize, edges: usize) -> Self {
+        Self::with_capacity(nodes, edges)
+    }
+}
