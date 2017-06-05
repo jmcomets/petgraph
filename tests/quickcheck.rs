@@ -36,6 +36,8 @@ use petgraph::algo::{
     tarjan_scc,
     dijkstra,
     bellman_ford,
+    transitive_closure,
+    has_path_connecting,
 };
 use petgraph::visit::{Topo, Reversed};
 use petgraph::visit::{
@@ -922,5 +924,23 @@ quickcheck! {
         for i in edges {
             assert!(gr2.edge_weight(edge_index(i)).is_none());
         }
+    }
+}
+
+quickcheck! {
+    fn test_transitive_closure(gr: Graph<(), ()>) -> bool {
+        let n = gr.node_count() as u32;
+        let tc = transitive_closure(&gr);
+
+        for col in 0..n {
+            for row in 0..n {
+                if tc[(row * n + col) as usize] !=
+                    has_path_connecting(&gr, row.into(), col.into(), None)
+                {
+                    return false;
+                }
+            }
+        }
+        true
     }
 }
