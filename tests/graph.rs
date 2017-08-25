@@ -1712,3 +1712,21 @@ fn test_dominators_simple_fast() {
     assert_eq!(doms.immediate_dominator(z), None,
                "nodes that aren't reachable from the root do not have an idom");
 }
+
+#[test]
+fn edges_connecting() {
+    let gr: Graph<(), ()> = Graph::from_edges(&[
+        (0, 5), (0, 2), (0, 3), (0, 1), (0, 4),
+        (1, 3),
+        (2, 3), (2, 4),
+        (4, 0), (4, 5),
+    ]);
+
+    use petgraph::graph::node_index;
+
+    let mut edges: Vec<_> = gr.edges_connecting(node_index(0), node_index(5))
+        .into_iter().collect();
+    edges.sort();
+
+    assert_eq!(edges, vec![node_index(2), node_index(4)]);
+}

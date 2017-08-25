@@ -6,6 +6,7 @@ use std::marker::PhantomData;
 use std::mem::size_of;
 use std::ops::{Deref, Index, IndexMut, Range};
 use std::slice;
+use std::collections::{HashSet, HashMap};
 
 use {
     Direction, Outgoing, Incoming,
@@ -843,6 +844,55 @@ impl<N, E, Ty, Ix> Graph<N, E, Ty, Ix>
             },
             ty: PhantomData,
         }
+    }
+
+    pub fn edges_connecting(&self, a: NodeIndex<Ix>, b: NodeIndex<Ix>) -> HashSet<NodeIndex<Ix>> {
+        // Get all of a's successors
+        let predecessor_map = {
+            let mut open_set = vec![a];
+            let mut closed_set = HashSet::new();
+            let mut predecessor_map = HashMap::new();
+
+            while let Some(node) = open_set.pop() {
+                // don't go past b
+                if node == b {
+                    continue
+                }
+
+                for neighbor in self.neighbors(node) {
+                    predecessor_map.entry(neighbor)
+                        .or_insert(vec![])
+                        .push(node);
+
+                    let inserted = closed_set.insert(neighbor);
+                    if inserted {
+                        open_set.push(neighbor);
+                    }
+                }
+            }
+
+            predecessor_map
+        };
+
+        // Get all nodes in b's predecessors
+        let mut open_set = vec![b];
+        let mut closed_set = HashSet::new();
+        while let Some(node) = open_set.pop() {
+            if let Some(ref neighbors) = predecessor_map.get(&node) {
+                for neighbor in neighbors.iter().cloned() {
+                    if neighbor == a {
+                        continue
+                    }
+
+                    let inserted = closed_set.insert(neighbor);
+                    if inserted {
+                        open_set.push(neighbor);
+                    }
+                }
+            }
+        }
+
+        closed_set
     }
 
     /// Lookup if there is an edge from `a` to `b`.
