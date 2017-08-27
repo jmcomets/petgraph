@@ -281,6 +281,9 @@ impl<N, E, Ty, Ix> StableGraph<N, E, Ty, Ix>
         node_weight
     }
 
+    /// Returns if the graph contains the given node.
+    ///
+    /// **Panics** if the node doesn't exist.
     pub fn contains_node(&self, a: NodeIndex<Ix>) -> bool {
         self.g.nodes.get(a.index()).map_or(false, |no| no.weight.is_some())
     }
@@ -1043,12 +1046,16 @@ impl<Ix: IndexType> WalkNeighbors<Ix> {
         self.inner.next(&g.g)
     }
 
+    /// Step to the next edge in the walk, returning:
+    /// - for an `Outgoing` walk, the target node
+    /// - for an `Incoming` walk, the source node
     pub fn next_node<N, E, Ty: EdgeType>(&mut self, g: &StableGraph<N, E, Ty, Ix>)
         -> Option<NodeIndex<Ix>>
     {
         self.next(g).map(|t| t.1)
     }
 
+    /// Step to the next edge in the walk.
     pub fn next_edge<N, E, Ty: EdgeType>(&mut self, g: &StableGraph<N, E, Ty, Ix>)
         -> Option<EdgeIndex<Ix>>
     {

@@ -467,6 +467,7 @@ macro_rules! iterator_wrap {
      item: $item: ty,
      iter: $iter: ty,
      ) => (
+        #[allow(missing_docs)]
         pub struct $name <$($typarm),*> where $($bounds)* {
             iter: $iter,
         }
@@ -493,6 +494,7 @@ iterator_wrap! {
     iter: Cloned<Keys<'a, N, Vec<(N, CompactDirection)>>>,
 }
 
+/// An iterator over the neighbors of a node, yielding each neighbor's weight.
 pub struct Neighbors<'a, N, Ty = Undirected>
     where N: 'a,
           Ty: EdgeType,
@@ -519,6 +521,7 @@ impl<'a, N, Ty> Iterator for Neighbors<'a, N, Ty>
     }
 }
 
+/// An iterator over the directed neighbors of a node, yielding each neighbor's weight.
 pub struct NeighborsDirected<'a, N, Ty>
     where N: 'a,
           Ty: EdgeType,
@@ -547,6 +550,8 @@ impl<'a, N, Ty> Iterator for NeighborsDirected<'a, N, Ty>
     }
 }
 
+/// An iterator over the neighbors of a node, yielding each edge identifier along with a reference
+/// to its weight.
 pub struct Edges<'a, N, E: 'a, Ty>
     where N: 'a + NodeTrait,
           Ty: EdgeType
@@ -588,6 +593,8 @@ impl<'a, N: 'a, E: 'a, Ty> IntoEdgeReferences for &'a GraphMap<N, E, Ty>
     }
 }
 
+/// An iterator over all nodes in the graph, yielding each edge identifier along with a reference
+/// to its weight.
 pub struct AllEdges<'a, N, E: 'a, Ty> where N: 'a + NodeTrait {
     inner: OrderMapIter<'a, (N, N), E>,
     ty: PhantomData<Ty>,
@@ -632,6 +639,8 @@ impl<'a, N, E, Ty> DoubleEndedIterator for AllEdges<'a, N, E, Ty>
     }
 }
 
+/// An iterator over all nodes in the graph, yielding each edge identifier along with a mutable
+/// reference to its weight.
 pub struct AllEdgesMut<'a, N, E: 'a, Ty> where N: 'a + NodeTrait {
     inner: OrderMapIterMut<'a, (N, N), E>,
     ty: PhantomData<Ty>,
@@ -807,6 +816,7 @@ impl<N, E, Ty> NodeCount for GraphMap<N, E, Ty>
     }
 }
 
+/// An iterator over all node identifiers in the graph.
 pub struct NodeIdentifiers<'a, N, E: 'a, Ty> where N: 'a + NodeTrait {
     iter: OrderMapIter<'a, N, Vec<(N, CompactDirection)>>,
     ty: PhantomData<Ty>,
@@ -839,6 +849,9 @@ impl<'a, N, E, Ty> IntoNodeReferences for &'a GraphMap<N, E, Ty>
     }
 }
 
+/// An iterator over all node identifiers in the graph, along with a reference to each node's
+/// weight. Note that since the weight is the node identifier, you can ignore one of the two
+/// elements yielded.
 pub struct NodeReferences<'a, N, E: 'a, Ty> where N: 'a + NodeTrait {
     iter: OrderMapIter<'a, N, Vec<(N, CompactDirection)>>,
     ty: PhantomData<Ty>,

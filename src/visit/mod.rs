@@ -133,15 +133,17 @@ impl<'a, N: 'a, E, Ty> IntoNeighbors for &'a GraphMap<N, E, Ty>
 trait_template! {
 /// Access to the neighbors of each node
 ///
-/// The neighbors are, depending on the graph’s edge type:
+/// The neighbors are, depending on the graph's edge type:
 ///
 /// - `Directed`: All targets of edges from `a`.
 /// - `Undirected`: All other endpoints of edges connected to `a`.
 pub trait IntoNeighbors : GraphRef {
     @section type
+    /// An iterator over the neighbors of a node.
     type Neighbors: Iterator<Item=Self::NodeId>;
+
     @section self
-    /// Return an iterator of the neighbors of node `a`.
+    /// Return an iterator over the neighbors of node `a`.
     fn neighbors(self, a: Self::NodeId) -> Self::Neighbors;
 }
 }
@@ -151,7 +153,7 @@ IntoNeighbors!{delegate_impl []}
 trait_template! {
 /// Access to the neighbors of each node, through incoming or outgoing edges.
 ///
-/// Depending on the graph’s edge type, the neighbors of a given directionality
+/// Depending on the graph's edge type, the neighbors of a given directionality
 /// are:
 ///
 /// - `Directed`, `Outgoing`: All targets of edges from `a`.
@@ -159,8 +161,11 @@ trait_template! {
 /// - `Undirected`: All other endpoints of edges connected to `a`.
 pub trait IntoNeighborsDirected : IntoNeighbors {
     @section type
+    /// An iterator over the directed neighbors of a node.
     type NeighborsDirected: Iterator<Item=Self::NodeId>;
+
     @section self
+    /// Return an iterator over the directed neighbors of node `a`.
     fn neighbors_directed(self, n: Self::NodeId, d: Direction)
         -> Self::NeighborsDirected;
 }
@@ -219,7 +224,7 @@ impl<'a, N: 'a, E, Ty> IntoNeighborsDirected for &'a GraphMap<N, E, Ty>
 trait_template! {
 /// Access to the edges of each node.
 ///
-/// The edges are, depending on the graph’s edge type:
+/// The edges are, depending on the graph's edge type:
 ///
 /// - `Directed`: All edges from `a`.
 /// - `Undirected`: All edges connected to `a`.
@@ -231,8 +236,11 @@ trait_template! {
 /// [er]: trait.EdgeRef.html
 pub trait IntoEdges : IntoEdgeReferences + IntoNeighbors {
     @section type
+    /// An iterator over the neighbors of a node, yielding `EdgeRef` items.
     type Edges: Iterator<Item=Self::EdgeRef>;
+
     @section self
+    /// Get an iterator over the neighbors of a node.
     fn edges(self, a: Self::NodeId) -> Self::Edges;
 }
 }
@@ -240,11 +248,14 @@ pub trait IntoEdges : IntoEdgeReferences + IntoNeighbors {
 IntoEdges!{delegate_impl []}
 
 trait_template! {
-/// Access to the sequence of the graph’s `NodeId`s.
+/// Access to the sequence of the graph's `NodeId`s.
 pub trait IntoNodeIdentifiers : GraphRef {
     @section type
+    /// An iterator over all node identifiers in the graph.
     type NodeIdentifiers: Iterator<Item=Self::NodeId>;
+
     @section self
+    /// An iterator over all node identifiers of the graph.
     fn node_identifiers(self) -> Self::NodeIdentifiers;
 }
 }
@@ -297,7 +308,10 @@ trait_template! {
 /// Define associated data for nodes and edges
 pub trait Data : GraphBase {
     @section type
+    /// The weight associated to a node.
     type NodeWeight;
+
+    /// The weight associated to an edge.
     type EdgeWeight;
 }
 }
@@ -309,17 +323,26 @@ Data!{delegate_impl [['a, G], G, &'a mut G, deref]}
 ///
 /// Edge references are used by traits `IntoEdges` and `IntoEdgeReferences`.
 pub trait EdgeRef : Copy {
+    /// The identifier of a node.
     type NodeId;
+
+    /// The identifier of an edge.
     type EdgeId;
+
+    /// The weight associated to an edge.
     type Weight;
+
     /// The source node of the edge.
     fn source(&self) -> Self::NodeId;
+
     /// The target node of the edge.
     fn target(&self) -> Self::NodeId;
+
+    /// The edge's identifier.
+    fn id(&self) -> Self::EdgeId;
+
     /// A reference to the weight of the edge.
     fn weight(&self) -> &Self::Weight;
-    /// The edge’s identifier.
-    fn id(&self) -> Self::EdgeId;
 }
 
 impl<'a, N, E> EdgeRef for (N, N, &'a E)
@@ -337,19 +360,31 @@ impl<'a, N, E> EdgeRef for (N, N, &'a E)
 
 /// A node reference.
 pub trait NodeRef : Copy {
+    /// The identifier of a node.
     type NodeId;
+
+    /// The weight associated to a node.
     type Weight;
+
+    /// The node's identifier.
     fn id(&self) -> Self::NodeId;
+
+    /// A reference to the weight of the node.
     fn weight(&self) -> &Self::Weight;
 }
 
 trait_template! {
-/// Access to the sequence of the graph’s nodes
+/// Access to the sequence of the graph's nodes
 pub trait IntoNodeReferences : Data + IntoNodeIdentifiers {
     @section type
+    /// A reference to a node.
     type NodeRef: NodeRef<NodeId=Self::NodeId, Weight=Self::NodeWeight>;
+
+    /// An iterator over node references.
     type NodeReferences: Iterator<Item=Self::NodeRef>;
+
     @section self
+    /// Return an iterator over node references.
     fn node_references(self) -> Self::NodeReferences;
 }
 }
@@ -379,13 +414,18 @@ impl<'a, Id, W> NodeRef for (Id, &'a W)
 
 
 trait_template! {
-/// Access to the sequence of the graph’s edges
+/// Access to the sequence of the graph's edges
 pub trait IntoEdgeReferences : Data + GraphRef {
     @section type
+    /// A reference to an edge.
     type EdgeRef: EdgeRef<NodeId=Self::NodeId, EdgeId=Self::EdgeId,
                           Weight=Self::EdgeWeight>;
+
+    /// An iterator over edge references.
     type EdgeReferences: Iterator<Item=Self::EdgeRef>;
+
     @section self
+    /// Return an iterator over edge references.
     fn edge_references(self) -> Self::EdgeReferences;
 }
 }
@@ -409,6 +449,7 @@ pub trait GraphProp : GraphBase {
     type EdgeType: EdgeType;
 
     @section ignore
+    /// Returns if the graph is directed.
     fn is_directed(&self) -> bool {
         <Self::EdgeType>::is_directed()
     }
@@ -454,7 +495,7 @@ impl<'a, N: 'a, E: 'a, Ty, Ix> IntoEdgeReferences for &'a Graph<N, E, Ty, Ix>
 
 
 trait_template!{
-    /// The graph’s `NodeId`s map to indices
+    /// The graph's `NodeId`s map to indices
     pub trait NodeIndexable : GraphBase {
         @section self_ref
         /// Return an upper bound of the node indices in the graph
@@ -473,6 +514,7 @@ trait_template! {
 /// A graph with a known node count.
 pub trait NodeCount : GraphBase {
     @section self_ref
+    /// Return the number of nodes in the graph.
     fn node_count(&self) -> usize;
 }
 }
@@ -480,7 +522,7 @@ pub trait NodeCount : GraphBase {
 NodeCount!{delegate_impl []}
 
 trait_template! {
-/// The graph’s `NodeId`s map to indices, in a range without holes.
+/// The graph's `NodeId`s map to indices, in a range without holes.
 ///
 /// The graph's node identifiers correspond to exactly the indices
 /// `0..self.node_bound()`.

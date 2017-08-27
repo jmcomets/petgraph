@@ -40,10 +40,14 @@ pub type DefaultIx = u32;
 ///
 /// Marked `unsafe` because: the trait must faithfully preseve
 /// and convert index values.
-pub unsafe trait IndexType : Copy + Default + Hash + Ord + fmt::Debug + 'static
-{
+pub unsafe trait IndexType : Copy + Default + Hash + Ord + fmt::Debug + 'static {
+    /// Returns a new `IndexType` from a `usize`.
     fn new(x: usize) -> Self;
+
+    /// Conversion of the `IndexType` to a `usize`.
     fn index(&self) -> usize;
+
+    /// Returns the maximum value for the `IndexType`.
     fn max() -> Self;
 }
 
@@ -87,22 +91,24 @@ unsafe impl IndexType for u8 {
 #[derive(Copy, Clone, Default, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub struct NodeIndex<Ix=DefaultIx>(Ix);
 
-impl<Ix: IndexType> NodeIndex<Ix>
-{
+impl<Ix: IndexType> NodeIndex<Ix> {
+
+    /// Builds a new `NodeIndex` from a `usize`.
     #[inline]
     pub fn new(x: usize) -> Self {
         NodeIndex(IndexType::new(x))
     }
 
+    /// Conversion of the `NodeIndex` to a `usize`.
     #[inline]
-    pub fn index(self) -> usize
-    {
+    pub fn index(self) -> usize {
         self.0.index()
     }
 
+    /// Returns the last value for the node indices, corresponding to the max value of the
+    /// `IndexType`.
     #[inline]
-    pub fn end() -> Self
-    {
+    pub fn end() -> Self {
         NodeIndex(IndexType::max())
     }
 
@@ -134,14 +140,15 @@ pub struct EdgeIndex<Ix=DefaultIx>(Ix);
 
 impl<Ix: IndexType> EdgeIndex<Ix>
 {
+    /// Builds a new `EdgeIndex` from a `usize`.
     #[inline]
     pub fn new(x: usize) -> Self {
         EdgeIndex(IndexType::new(x))
     }
 
+    /// Conversion of the `EdgeIndex` to a `usize`.
     #[inline]
-    pub fn index(self) -> usize
-    {
+    pub fn index(self) -> usize {
         self.0.index()
     }
 
@@ -1760,12 +1767,14 @@ impl<Ix: IndexType> WalkNeighbors<Ix> {
         None
     }
 
+    /// Returns the next node in the walk, if available.
     pub fn next_node<N, E, Ty: EdgeType>(&mut self, g: &Graph<N, E, Ty, Ix>)
         -> Option<NodeIndex<Ix>>
     {
         self.next(g).map(|t| t.1)
     }
 
+    /// Returns the next edge in the walk, if available.
     pub fn next_edge<N, E, Ty: EdgeType>(&mut self, g: &Graph<N, E, Ty, Ix>)
         -> Option<EdgeIndex<Ix>>
     {
@@ -1949,6 +1958,7 @@ pub mod stable_graph;
 pub struct Frozen<'a, G: 'a>(&'a mut G);
 
 impl<'a, G> Frozen<'a, G> {
+    /// Create a new frozen graph.
     pub fn new(gr: &'a mut G) -> Self {
         Frozen(gr)
     }

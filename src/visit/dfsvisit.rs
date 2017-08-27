@@ -10,6 +10,7 @@ pub struct Time(pub usize);
 /// A depth first search (DFS) visitor event.
 #[derive(Copy, Clone, Debug)]
 pub enum DfsEvent<N> {
+    /// A node and its first discovery time.
     Discover(N, Time),
     /// An edge of the tree formed by the traversal.
     TreeEdge(N, N),
@@ -20,6 +21,7 @@ pub enum DfsEvent<N> {
     /// For an edge *(u, v)*, if the discover time of *v* is greater than *u*,
     /// then it is a forward edge, else a cross edge.
     CrossForwardEdge(N, N),
+    /// A node and the time that all its subtree was visited.
     Finish(N, Time),
 }
 
@@ -39,12 +41,16 @@ macro_rules! try_control {
 /// `Break` can carry a value.
 #[derive(Copy, Clone, Debug)]
 pub enum Control<B> {
+    /// Continue the execution.
     Continue,
+    /// Break the execution with a value.
     Break(B),
 }
 
 impl<B> Control<B> {
+    /// Return a breaking control value with no value.
     pub fn breaking() -> Control<()> { Control::Break(()) }
+
     /// Get the value in `Control::Break(_)`, if present.
     pub fn break_value(self) -> Option<B> {
         match self {
@@ -58,7 +64,10 @@ impl<B> Control<B> {
 ///
 /// The empty return value `()` is equivalent to continue.
 pub trait ControlFlow {
+    /// Should return a value that responds negatively to `should_break`.
     fn continuing() -> Self;
+
+    /// Return if the control flow should be broken.
     fn should_break(&self) -> bool;
 }
 

@@ -353,7 +353,9 @@ impl<N, VM> Topo<N, VM>
 /// This for example allows graph traversals that don't hold a borrow of the
 /// graph they are traversing.
 pub trait Walker<Context> {
+    /// An item that's yielded by this walk.
     type Item;
+
     /// Advance to the next item
     fn walk_next(&mut self, context: Context) -> Option<Self::Item>;
 
@@ -380,14 +382,17 @@ impl<W, C> WalkerIter<W, C>
     where W: Walker<C>,
           C: Clone,
 {
+    /// Clone the context at this step of the walk.
     pub fn context(&self) -> C {
         self.context.clone()
     }
 
+    /// Get a reference to the walker that this iterator is based on.
     pub fn inner_ref(&self) -> &W {
         &self.walker
     }
 
+    /// Get a mutable reference to the walker that this iterator is based on.
     pub fn inner_mut(&mut self) -> &mut W {
         &mut self.walker
     }

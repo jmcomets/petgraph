@@ -21,7 +21,10 @@ trait_template!{
     /// Access node and edge weights (associated data).
 pub trait DataMap : Data {
     @section self_ref
+    /// Return a reference to the given node's weight, if available.
     fn node_weight(&self, id: Self::NodeId) -> Option<&Self::NodeWeight>;
+
+    /// Return a reference to the given edge's weight, if available.
     fn edge_weight(&self, id: Self::EdgeId) -> Option<&Self::EdgeWeight>;
 }
 }
@@ -38,7 +41,10 @@ trait_template! {
     /// Access node and edge weights mutably.
 pub trait DataMapMut : DataMap {
     @section self_mut
+    /// Return a mutable reference to the given node's weight, if available.
     fn node_weight_mut(&mut self, id: Self::NodeId) -> Option<&mut Self::NodeWeight>;
+
+    /// Return a mutable reference to the given edge's weight, if available.
     fn edge_weight_mut(&mut self, id: Self::EdgeId) -> Option<&mut Self::EdgeWeight>;
 }
 }
@@ -48,7 +54,9 @@ DataMapMut!{delegate_impl [[G], G, Reversed<G>, access0]}
 
 /// A graph that can be extended with further nodes and edges
 pub trait Build : Data + NodeCount {
+    /// Add a node to the graph, given its weight. Should return the identifier of the node added.
     fn add_node(&mut self, weight: Self::NodeWeight) -> Self::NodeId;
+
     /// Add a new edge. If parallel edges (duplicate) are not allowed and
     /// the edge already exists, return `None`.
     fn add_edge(&mut self,
@@ -57,6 +65,7 @@ pub trait Build : Data + NodeCount {
                 weight: Self::EdgeWeight) -> Option<Self::EdgeId> {
         Some(self.update_edge(a, b, weight))
     }
+
     /// Add or update the edge from `a` to `b`. Return the id of the affected
     /// edge.
     fn update_edge(&mut self,
@@ -67,6 +76,8 @@ pub trait Build : Data + NodeCount {
 
 /// A graph that can be created
 pub trait Create : Build + Default {
+    /// Prepare the graph for construction with `nodes` nodes and `edges` edges. Note that these
+    /// shouldn't have been added to the graph, the space should simply be pre-allocated.
     fn with_capacity(nodes: usize, edges: usize) -> Self;
 }
 
@@ -244,18 +255,26 @@ impl<N, E, Ty> Create for GraphMap<N, E, Ty>
 pub enum Element<N, E> {
     /// A graph node.
     Node {
+        /// The weight of a node.
         weight: N,
     },
     /// A graph edge.
     Edge {
+        /// The source node's index.
         source: usize,
+
+        /// The target node's index.
         target: usize,
+
+        /// The edge's weight.
         weight: E,
     }
 }
 
 /// Create a graph from an iterator of elements.
 pub trait FromElements : Create {
+    /// Returns a new graph built from a list of elements. Implementation note: all edges should be
+    /// given after their source and target nodes, although this may change in the future.
     fn from_elements<I>(iterable: I) -> Self
         where Self: Sized,
               I: IntoIterator<Item=Element<Self::NodeWeight, Self::EdgeWeight>>,
@@ -275,7 +294,6 @@ pub trait FromElements : Create {
         }
         gr
     }
-        
 }
 
 fn from_elements_indexable<G, I>(iterable: I) -> G

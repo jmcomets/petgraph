@@ -178,10 +178,12 @@ impl<N, E, Ty, Ix> Csr<N, E, Ty, Ix>
           Ix: IndexType,
 {
 
+    /// Returns the number of nodes.
     pub fn node_count(&self) -> usize {
         self.row.len() - 1
     }
 
+    /// Returns the number of edges.
     pub fn edge_count(&self) -> usize {
         if self.is_directed() {
             self.column.len()
@@ -190,6 +192,7 @@ impl<N, E, Ty, Ix> Csr<N, E, Ty, Ix>
         }
     }
 
+    /// Returns if the graph is directed.
     pub fn is_directed(&self) -> bool {
         Ty::is_directed()
     }
@@ -322,6 +325,7 @@ impl<N, E, Ty, Ix> Csr<N, E, Ty, Ix>
     }
 }
 
+/// An iterator over the edges of a node, yielding edge references.
 #[derive(Clone, Debug)]
 pub struct Edges<'a, E: 'a, Ty = Directed, Ix: 'a = DefaultIx> {
     index: usize,
@@ -330,6 +334,7 @@ pub struct Edges<'a, E: 'a, Ty = Directed, Ix: 'a = DefaultIx> {
     ty: PhantomData<Ty>,
 }
 
+/// A reference to an edge.
 #[derive(Debug)]
 pub struct EdgeReference<'a, E: 'a, Ty, Ix: 'a = DefaultIx> {
     index: EdgeIndex,
@@ -418,6 +423,7 @@ impl<'a, N, E, Ty, Ix> IntoEdgeReferences for &'a Csr<N, E, Ty, Ix>
     }
 }
 
+/// An iterator over all edge references in the graph.
 pub struct EdgeReferences<'a, E: 'a, Ty, Ix: 'a> {
     source_index: NodeIndex<Ix>,
     index: usize,
@@ -494,6 +500,7 @@ impl<N, E, Ty, Ix> Visitable for Csr<N, E, Ty, Ix>
 
 use std::slice::Iter as SliceIter;
 
+/// An iterator over the neighbors of a node, yielding node indices.
 #[derive(Clone, Debug)]
 pub struct Neighbors<'a, Ix: 'a = DefaultIx> {
     iter: SliceIter<'a, NodeIndex<Ix>>,
@@ -544,6 +551,7 @@ impl<N, E, Ty, Ix> NodeIndexable for Csr<N, E, Ty, Ix>
 impl<N, E, Ty> NodeCompactIndexable for Csr<N, E, Ty>
     where Ty: EdgeType { }
 
+/// An iterator over all node indices in the graph.
 pub struct NodeIdentifiers<Ix = DefaultIx> {
     r: Range<usize>,
     ty: PhantomData<Ix>,

@@ -179,6 +179,7 @@ impl<N, VM> DfsSpace<N, VM>
     where N: Copy + PartialEq,
           VM: VisitMap<N>,
 {
+    /// Build a new empty Workspace for graph traversal.
     pub fn new<G>(g: G) -> Self
         where G: GraphRef + Visitable<NodeId=N, Map=VM>,
     {
@@ -607,7 +608,10 @@ impl<M> Measure for M
 
 /// A floating-point measure.
 pub trait FloatMeasure : Measure + Copy {
+    /// Should represent the zero value of the float measure.
     fn zero() -> Self;
+
+    /// Should represent the infinite value of the float measure.
     fn infinite() -> Self;
 }
 

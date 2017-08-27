@@ -13,6 +13,8 @@
 //!
 #![doc(html_root_url = "https://docs.rs/petgraph/0.4/")]
 
+#![deny(missing_docs)]
+
 extern crate fixedbitset;
 #[cfg(feature = "graphmap")]
 extern crate ordermap;
@@ -138,6 +140,7 @@ copyclone!(Undirected);
 
 /// A graph's edge type determines whether is has directed edges or not.
 pub trait EdgeType {
+    /// Should return if the edge is directed.
     fn is_directed() -> bool;
 }
 
@@ -157,7 +160,13 @@ impl EdgeType for Undirected {
 ///
 /// For `Graph::from_edges` and `GraphMap::from_edges`.
 pub trait IntoWeightedEdge<E> {
+    /// The node's identifier.
     type NodeId;
+
+    /// Build a weighted edge from this, which should include:
+    /// - the source node's identifier
+    /// - the target node's identifier
+    /// - the edge's weight
     fn into_weighted_edge(self) -> (Self::NodeId, Self::NodeId, E);
 }
 

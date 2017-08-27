@@ -107,6 +107,8 @@ impl<Ty: EdgeType> Generator<Ty> {
         &self.g
     }
 
+    /// Run a new generation and return a reference to the inner graph if there is new generated
+    /// state.
     pub fn next_ref(&mut self) -> Option<&Graph<(), (), Ty>> {
         if self.bits == !0 {
             self.bits = 0;
