@@ -75,10 +75,13 @@ impl<B> ControlFlow for Control<B> {
     }
 }
 
-impl<E> ControlFlow for Result<(), E> {
-    fn continuing() -> Self { Ok(()) }
+impl<T: Default, E> ControlFlow for Result<T, E> {
+    fn continuing() -> Self {
+        Ok(T::default())
+    }
+
     fn should_break(&self) -> bool {
-        if let Err(_) = *self { true } else { false }
+        self.is_err()
     }
 }
 
