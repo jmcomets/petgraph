@@ -424,8 +424,7 @@ impl<N, E> Graph<N, E, Directed>
     ///
     /// This is a convenience method. Use `Graph::with_capacity` or `Graph::default` for
     /// a constructor that is generic in all the type parameters of `Graph`.
-    pub fn new() -> Self
-    {
+    pub fn new() -> Self {
         Graph{nodes: Vec::new(), edges: Vec::new(),
               ty: PhantomData}
     }
@@ -437,10 +436,174 @@ impl<N, E> Graph<N, E, Undirected>
     ///
     /// This is a convenience method. Use `Graph::with_capacity` or `Graph::default` for
     /// a constructor that is generic in all the type parameters of `Graph`.
-    pub fn new_undirected() -> Self
-    {
+    pub fn new_undirected() -> Self {
         Graph{nodes: Vec::new(), edges: Vec::new(),
               ty: PhantomData}
+    }
+}
+
+impl<N, E, Ix: IndexType> Graph<N, E, Directed, Ix>
+{
+    /// Return an iterator of all nodes with an edge starting from `a`.
+    ///
+    /// - `Directed`: Outgoing edges from `a`.
+    /// - `Undirected`: All edges from or to `a`.
+    ///
+    /// Produces an empty iterator if the node doesn't exist.<br>
+    /// Iterator element type is `NodeIndex<Ix>`.
+    ///
+    /// Use [`.neighbors(a).detach()`][1] to get a neighbor walker that does
+    /// not borrow from the graph.
+    ///
+    /// [1]: struct.Neighbors.html#method.detach
+    pub fn neighbors(&self, a: NodeIndex<Ix>) -> Neighbors<E, Ix> {
+        self.neighbors_directed(a, Outgoing)
+    }
+
+    /// Return an iterator of all neighbors that have an edge between them and
+    /// `a`, in the specified direction.
+    /// If the graph's edges are undirected, this is equivalent to *.neighbors(a)*.
+    ///
+    /// - `Directed`, `Outgoing`: All edges from `a`.
+    /// - `Directed`, `Incoming`: All edges to `a`.
+    /// - `Undirected`: All edges from or to `a`.
+    ///
+    /// Produces an empty iterator if the node doesn't exist.<br>
+    /// Iterator element type is `NodeIndex<Ix>`.
+    ///
+    /// For a `Directed` graph, neighbors are listed in reverse order of their
+    /// addition to the graph, so the most recently added edge's neighbor is
+    /// listed first. The order in an `Undirected` graph is arbitrary.
+    ///
+    /// Use [`.neighbors_directed(a, dir).detach()`][1] to get a neighbor walker that does
+    /// not borrow from the graph.
+    ///
+    /// [1]: struct.Neighbors.html#method.detach
+    pub fn neighbors_directed(&self, a: NodeIndex<Ix>, dir: Direction) -> Neighbors<E, Ix> {
+        let mut iter = self.neighbors_undirected(a);
+        if self.is_directed() {
+            let k = dir.index();
+            iter.next[1 - k] = EdgeIndex::end();
+            iter.skip_start = NodeIndex::end();
+        }
+        iter
+    }
+
+    /// Return an iterator of all neighbors that have an edge between them and
+    /// `a`, in either direction.
+    /// If the graph's edges are undirected, this is equivalent to *.neighbors(a)*.
+    ///
+    /// - `Directed` and `Undirected`: All edges from or to `a`.
+    ///
+    /// Produces an empty iterator if the node doesn't exist.<br>
+    /// Iterator element type is `NodeIndex<Ix>`.
+    ///
+    /// Use [`.neighbors_undirected(a).detach()`][1] to get a neighbor walker that does
+    /// not borrow from the graph.
+    ///
+    /// [1]: struct.Neighbors.html#method.detach
+    ///
+    pub fn neighbors_undirected(&self, a: NodeIndex<Ix>) -> Neighbors<E, Ix> {
+        Neighbors {
+            skip_start: a,
+            edges: &self.edges,
+            next: match self.nodes.get(a.index()) {
+                None => [EdgeIndex::end(), EdgeIndex::end()],
+                Some(n) => n.next,
+            }
+        }
+    }
+
+    /// Return an iterator of all edges of `a`.
+    ///
+    /// - `Directed`: Outgoing edges from `a`.
+    /// - `Undirected`: All edges connected to `a`.
+    ///
+    /// Produces an empty iterator if the node doesn't exist.<br>
+    /// Iterator element type is `EdgeReference<E, Ix>`.
+    pub fn edges(&self, a: NodeIndex<Ix>) -> Edges<E, Directed, Ix> {
+        self.edges_directed(a, Outgoing)
+    }
+
+    /// Return an iterator of all edges of `a`, in the specified direction.
+    ///
+    /// - `Directed`, `Outgoing`: All edges from `a`.
+    /// - `Directed`, `Incoming`: All edges to `a`.
+    /// - `Undirected`: All edges connected to `a`.
+    ///
+    /// Produces an empty iterator if the node `a` doesn't exist.<br>
+    /// Iterator element type is `EdgeReference<E, Ix>`.
+    pub fn edges_directed(&self, a: NodeIndex<Ix>, dir: Direction) -> Edges<E, Directed, Ix> {
+        let mut iter = self.edges_undirected(a);
+        if self.is_directed() {
+            iter.direction = Some(dir);
+        }
+        if self.is_directed() && dir == Incoming {
+            iter.next.swap(0, 1);
+        }
+        iter
+    }
+
+    /// Return an iterator over all edges connected to `a`.
+    ///
+    /// - `Directed` and `Undirected`: All edges connected to `a`.
+    ///
+    /// Produces an empty iterator if the node `a` doesn't exist.<br>
+    /// Iterator element type is `EdgeReference<E, Ix>`.
+    fn edges_undirected(&self, a: NodeIndex<Ix>) -> Edges<E, Directed, Ix> {
+        Edges {
+            skip_start: a,
+            edges: &self.edges,
+            direction: None,
+            next: match self.nodes.get(a.index()) {
+                None => [EdgeIndex::end(), EdgeIndex::end()],
+                Some(n) => n.next,
+            },
+            ty: PhantomData,
+        }
+    }
+}
+
+impl<N, E, Ix: IndexType> Graph<N, E, Undirected, Ix>
+{
+    /// Return an iterator of all nodes with an edge starting from `a`.
+    ///
+    /// Produces an empty iterator if the node doesn't exist.<br>
+    /// Iterator element type is `NodeIndex<Ix>`.
+    ///
+    /// Use [`.neighbors(a).detach()`][1] to get a neighbor walker that does
+    /// not borrow from the graph.
+    ///
+    /// [1]: struct.Neighbors.html#method.detach
+    pub fn neighbors(&self, a: NodeIndex<Ix>) -> Neighbors<E, Ix> {
+        Neighbors {
+            skip_start: a,
+            edges: &self.edges,
+            next: match self.nodes.get(a.index()) {
+                None => [EdgeIndex::end(), EdgeIndex::end()],
+                Some(n) => n.next,
+            }
+        }
+    }
+
+    /// Return an iterator of all edges of `a`.
+    ///
+    /// - `Directed`: Outgoing edges from `a`.
+    /// - `Undirected`: All edges connected to `a`.
+    ///
+    /// Produces an empty iterator if the node doesn't exist.<br>
+    /// Iterator element type is `EdgeReference<E, Ix>`.
+    pub fn edges(&self, a: NodeIndex<Ix>) -> Edges<E, Undirected, Ix> {
+        Edges {
+            skip_start: a,
+            edges: &self.edges,
+            direction: None,
+            next: match self.nodes.get(a.index()) {
+                None => [EdgeIndex::end(), EdgeIndex::end()],
+                Some(n) => n.next,
+            },
+            ty: PhantomData,
+        }
     }
 }
 
@@ -725,129 +888,6 @@ impl<N, E, Ty, Ix> Graph<N, E, Ty, Ix>
         // edge index.
         self.change_edge_links(swap, swapped_e, [e, e]);
         Some(edge.weight)
-    }
-
-    /// Return an iterator of all nodes with an edge starting from `a`.
-    ///
-    /// - `Directed`: Outgoing edges from `a`.
-    /// - `Undirected`: All edges from or to `a`.
-    ///
-    /// Produces an empty iterator if the node doesn't exist.<br>
-    /// Iterator element type is `NodeIndex<Ix>`.
-    ///
-    /// Use [`.neighbors(a).detach()`][1] to get a neighbor walker that does
-    /// not borrow from the graph.
-    ///
-    /// [1]: struct.Neighbors.html#method.detach
-    pub fn neighbors(&self, a: NodeIndex<Ix>) -> Neighbors<E, Ix>
-    {
-        self.neighbors_directed(a, Outgoing)
-    }
-
-    /// Return an iterator of all neighbors that have an edge between them and
-    /// `a`, in the specified direction.
-    /// If the graph's edges are undirected, this is equivalent to *.neighbors(a)*.
-    ///
-    /// - `Directed`, `Outgoing`: All edges from `a`.
-    /// - `Directed`, `Incoming`: All edges to `a`.
-    /// - `Undirected`: All edges from or to `a`.
-    ///
-    /// Produces an empty iterator if the node doesn't exist.<br>
-    /// Iterator element type is `NodeIndex<Ix>`.
-    ///
-    /// For a `Directed` graph, neighbors are listed in reverse order of their
-    /// addition to the graph, so the most recently added edge's neighbor is
-    /// listed first. The order in an `Undirected` graph is arbitrary.
-    ///
-    /// Use [`.neighbors_directed(a, dir).detach()`][1] to get a neighbor walker that does
-    /// not borrow from the graph.
-    ///
-    /// [1]: struct.Neighbors.html#method.detach
-    pub fn neighbors_directed(&self, a: NodeIndex<Ix>, dir: Direction) -> Neighbors<E, Ix>
-    {
-        let mut iter = self.neighbors_undirected(a);
-        if self.is_directed() {
-            let k = dir.index();
-            iter.next[1 - k] = EdgeIndex::end();
-            iter.skip_start = NodeIndex::end();
-        }
-        iter
-    }
-
-    /// Return an iterator of all neighbors that have an edge between them and
-    /// `a`, in either direction.
-    /// If the graph's edges are undirected, this is equivalent to *.neighbors(a)*.
-    ///
-    /// - `Directed` and `Undirected`: All edges from or to `a`.
-    ///
-    /// Produces an empty iterator if the node doesn't exist.<br>
-    /// Iterator element type is `NodeIndex<Ix>`.
-    ///
-    /// Use [`.neighbors_undirected(a).detach()`][1] to get a neighbor walker that does
-    /// not borrow from the graph.
-    ///
-    /// [1]: struct.Neighbors.html#method.detach
-    ///
-    pub fn neighbors_undirected(&self, a: NodeIndex<Ix>) -> Neighbors<E, Ix>
-    {
-        Neighbors {
-            skip_start: a,
-            edges: &self.edges,
-            next: match self.nodes.get(a.index()) {
-                None => [EdgeIndex::end(), EdgeIndex::end()],
-                Some(n) => n.next,
-            }
-        }
-    }
-
-    /// Return an iterator of all edges of `a`.
-    ///
-    /// - `Directed`: Outgoing edges from `a`.
-    /// - `Undirected`: All edges connected to `a`.
-    ///
-    /// Produces an empty iterator if the node doesn't exist.<br>
-    /// Iterator element type is `EdgeReference<E, Ix>`.
-    pub fn edges(&self, a: NodeIndex<Ix>) -> Edges<E, Ty, Ix> {
-        self.edges_directed(a, Outgoing)
-    }
-
-    /// Return an iterator of all edges of `a`, in the specified direction.
-    ///
-    /// - `Directed`, `Outgoing`: All edges from `a`.
-    /// - `Directed`, `Incoming`: All edges to `a`.
-    /// - `Undirected`: All edges connected to `a`.
-    ///
-    /// Produces an empty iterator if the node `a` doesn't exist.<br>
-    /// Iterator element type is `EdgeReference<E, Ix>`.
-    pub fn edges_directed(&self, a: NodeIndex<Ix>, dir: Direction) -> Edges<E, Ty, Ix>
-    {
-        let mut iter = self.edges_undirected(a);
-        if self.is_directed() {
-            iter.direction = Some(dir);
-        }
-        if self.is_directed() && dir == Incoming {
-            iter.next.swap(0, 1);
-        }
-        iter
-    }
-
-    /// Return an iterator over all edges connected to `a`.
-    ///
-    /// - `Directed` and `Undirected`: All edges connected to `a`.
-    ///
-    /// Produces an empty iterator if the node `a` doesn't exist.<br>
-    /// Iterator element type is `EdgeReference<E, Ix>`.
-    fn edges_undirected(&self, a: NodeIndex<Ix>) -> Edges<E, Ty, Ix> {
-        Edges {
-            skip_start: a,
-            edges: &self.edges,
-            direction: None,
-            next: match self.nodes.get(a.index()) {
-                None => [EdgeIndex::end(), EdgeIndex::end()],
-                Some(n) => n.next,
-            },
-            ty: PhantomData,
-        }
     }
 
     /// Lookup if there is an edge from `a` to `b`.
@@ -1499,27 +1539,26 @@ impl<'a, E, Ix> EdgesWalkerMut<'a, E, Ix> where
     }
 }
 
-
-impl<'a, N, E, Ty, Ix> IntoEdges for &'a Graph<N, E, Ty, Ix>
-    where Ty: EdgeType,
-          Ix: IndexType,
-{
-    type Edges = Edges<'a, E, Ty, Ix>;
+impl<'a, N, E, Ix: IndexType> IntoEdges for &'a Graph<N, E, Directed, Ix> {
+    type Edges = Edges<'a, E, Directed, Ix>;
     fn edges(self, a: Self::NodeId) -> Self::Edges {
         self.edges(a)
     }
 }
 
-impl<'a, N, E, Ty, Ix> IntoEdgesDirected for &'a Graph<N, E, Ty, Ix>
-    where Ty: EdgeType,
-          Ix: IndexType,
-{
-    type EdgesDirected = Edges<'a, E, Ty, Ix>;
+impl<'a, N, E, Ix: IndexType> IntoEdges for &'a Graph<N, E, Undirected, Ix> {
+    type Edges = Edges<'a, E, Undirected, Ix>;
+    fn edges(self, a: Self::NodeId) -> Self::Edges {
+        self.edges(a)
+    }
+}
+
+impl<'a, N, E, Ix: IndexType> IntoEdgesDirected for &'a Graph<N, E, Directed, Ix> {
+    type EdgesDirected = Edges<'a, E, Directed, Ix>;
     fn edges_directed(self, a: Self::NodeId, dir: Direction) -> Self::EdgesDirected {
         self.edges_directed(a, dir)
     }
 }
-
 
 /// Iterator over the edges of from or to a node
 pub struct Edges<'a, E: 'a, Ty, Ix: 'a = DefaultIx>

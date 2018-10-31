@@ -258,7 +258,7 @@ pub fn scc<G>(g: G) -> Vec<Vec<G::NodeId>>
 ///
 /// This implementation is iterative and does two passes over the nodes.
 pub fn kosaraju_scc<G>(g: G) -> Vec<Vec<G::NodeId>>
-    where G: IntoNeighborsDirected + Visitable + IntoNodeIdentifiers,
+    where G: IntoNeighbors + Visitable + IntoNodeIdentifiers,
 {
     let mut dfs = DfsPostOrder::empty(g);
 

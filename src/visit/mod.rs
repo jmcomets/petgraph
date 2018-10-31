@@ -64,6 +64,8 @@ use graph::{NodeIndex};
 use super::{
     graph,
     EdgeType,
+    Directed,
+    Undirected,
 };
 
 use graph::{
@@ -167,27 +169,24 @@ pub trait IntoNeighborsDirected : IntoNeighbors {
 }
 }
 
-impl<'a, N, E: 'a, Ty, Ix> IntoNeighbors for &'a Graph<N, E, Ty, Ix>
-    where Ty: EdgeType,
-          Ix: IndexType,
-{
+impl<'a, N, E: 'a, Ix: IndexType> IntoNeighbors for &'a Graph<N, E, Directed, Ix> {
     type Neighbors = graph::Neighbors<'a, E, Ix>;
-    fn neighbors(self, n: graph::NodeIndex<Ix>)
-        -> graph::Neighbors<'a, E, Ix>
-    {
-        Graph::neighbors(self, n)
+    fn neighbors(self, n: graph::NodeIndex<Ix>) -> graph::Neighbors<'a, E, Ix> {
+        Graph::<N, E, Directed, Ix>::neighbors(self, n)
     }
 }
 
-impl<'a, N, E: 'a, Ty, Ix> IntoNeighborsDirected for &'a Graph<N, E, Ty, Ix>
-    where Ty: EdgeType,
-          Ix: IndexType,
-{
+impl<'a, N, E: 'a, Ix: IndexType> IntoNeighbors for &'a Graph<N, E, Undirected, Ix> {
+    type Neighbors = graph::Neighbors<'a, E, Ix>;
+    fn neighbors(self, n: graph::NodeIndex<Ix>) -> graph::Neighbors<'a, E, Ix> {
+        Graph::<N, E, Undirected, Ix>::neighbors(self, n)
+    }
+}
+
+impl<'a, N, E: 'a, Ix: IndexType> IntoNeighborsDirected for &'a Graph<N, E, Directed, Ix> {
     type NeighborsDirected = graph::Neighbors<'a, E, Ix>;
-    fn neighbors_directed(self, n: graph::NodeIndex<Ix>, d: Direction)
-        -> graph::Neighbors<'a, E, Ix>
-    {
-        Graph::neighbors_directed(self, n, d)
+    fn neighbors_directed(self, n: graph::NodeIndex<Ix>, d: Direction) -> graph::Neighbors<'a, E, Ix> {
+        Graph::<N, E, Directed, Ix>::neighbors_directed(self, n, d)
     }
 }
 
