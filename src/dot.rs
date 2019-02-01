@@ -1,6 +1,9 @@
 //! Simple graphviz dot file format output.
-
+#[cfg(not(feature = "no_std"))]
 use std::fmt::{self, Display, Write};
+
+#[cfg(feature = "no_std")]
+use core::fmt::{self, Display, Write};
 
 use crate::visit::GraphRef;
 
@@ -229,6 +232,9 @@ where
 
 #[test]
 fn test_escape() {
+    #[cfg(feature = "alloc")]
+    use alloc::string::String;
+
     let mut buff = String::new();
     {
         let mut e = Escaper(&mut buff);
