@@ -59,8 +59,6 @@ pub use crate::graph::{
     edge_index,
 };
 
-use crate::util::enumerate;
-
 #[cfg(feature = "serde-1")]
 mod serialization;
 
@@ -494,7 +492,7 @@ impl<N, E, Ty, Ix> StableGraph<N, E, Ty, Ix>
     /// Return an iterator over the node indices of the graph
     pub fn node_indices(&self) -> NodeIndices<N, Ix> {
         NodeIndices {
-            iter: enumerate(self.raw_nodes())
+            iter: self.raw_nodes().into_iter().enumerate()
         }
     }
 
@@ -531,7 +529,7 @@ impl<N, E, Ty, Ix> StableGraph<N, E, Ty, Ix>
     /// Return an iterator over the node indices of the graph
     pub fn edge_indices(&self) -> EdgeIndices<E, Ix> {
         EdgeIndices {
-            iter: enumerate(self.raw_edges())
+            iter: self.raw_edges().into_iter().enumerate()
         }
     }
 
@@ -856,7 +854,7 @@ impl<N, E, Ty, Ix> StableGraph<N, E, Ty, Ix>
 
         // the stable graph keeps the node map itself
 
-        for (i, node) in enumerate(self.raw_nodes()) {
+        for (i, node) in self.raw_nodes().into_iter().enumerate() {
             if i >= node_bound { break; }
             if let Some(node_weight) = node.weight.as_ref() {
                 if let Some(new_weight) = node_map(NodeIndex::new(i), node_weight) {
@@ -866,7 +864,7 @@ impl<N, E, Ty, Ix> StableGraph<N, E, Ty, Ix>
             }
             result_g.add_vacant_node(&mut free_node);
         }
-        for (i, edge) in enumerate(self.raw_edges()) {
+        for (i, edge) in self.raw_edges().into_iter().enumerate() {
             if i >= edge_bound { break; }
             let source = edge.source();
             let target = edge.target();
@@ -936,7 +934,7 @@ impl<N, E, Ty, Ix> StableGraph<N, E, Ty, Ix>
         self.node_count = 0;
         self.edge_count = 0;
         let mut free_node = NodeIndex::end();
-        for (node_index, node) in enumerate(&mut self.g.nodes) {
+        for (node_index, node) in self.g.nodes.iter_mut().enumerate() {
             if node.weight.is_some() {
                 self.node_count += 1;
             } else {
@@ -948,7 +946,7 @@ impl<N, E, Ty, Ix> StableGraph<N, E, Ty, Ix>
         self.free_node = free_node;
 
         let mut free_edge = EdgeIndex::end();
-        for (edge_index, edge) in enumerate(&mut self.g.edges) {
+        for (edge_index, edge) in self.g.edges.iter_mut().enumerate() {
             if edge.weight.is_none() {
                 // free edge
                 edge.next = [free_edge, EdgeIndex::end()];
@@ -1148,7 +1146,7 @@ impl<N, E, Ty, Ix> From<StableGraph<N, E, Ty, Ix>> for Graph<N, E, Ty, Ix>
         // mapping from old node index to new node index
         let mut node_index_map = vec![NodeIndex::end(); graph.node_bound()];
 
-        for (i, node) in enumerate(graph.g.nodes) {
+        for (i, node) in graph.g.nodes.into_iter().enumerate() {
             if let Some(nw) = node.weight {
                 node_index_map[i] = result_g.add_node(nw);
             }
@@ -1176,7 +1174,7 @@ impl<'a, N, E, Ty, Ix> IntoNodeReferences for &'a StableGraph<N, E, Ty, Ix>
     type NodeReferences = NodeReferences<'a, N, Ix>;
     fn node_references(self) -> Self::NodeReferences {
         NodeReferences {
-            iter: enumerate(self.raw_nodes())
+            iter: self.raw_nodes().into_iter().enumerate()
         }
     }
 }

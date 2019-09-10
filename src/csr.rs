@@ -10,8 +10,6 @@ use crate::visit::{EdgeRef, GraphBase, IntoNeighbors, NodeIndexable, IntoEdges};
 use crate::visit::{NodeCompactIndexable, IntoNodeIdentifiers, Visitable};
 use crate::visit::{Data, IntoEdgeReferences, NodeCount, GraphProp};
 
-use crate::util::zip;
-
 #[doc(no_inline)]
 pub use crate::graph::{IndexType, DefaultIx};
 
@@ -385,7 +383,7 @@ impl<N, E, Ty, Ix> Csr<N, E, Ty, Ix>
         Edges {
             index: r.start,
             source: a,
-            iter: zip(&self.column[r.clone()], &self.edges[r]),
+            iter: self.column[r.clone()].iter().zip(self.edges[r].iter()),
             ty: self.ty,
         }
     }
@@ -481,7 +479,7 @@ impl<'a, N, E, Ty, Ix> IntoEdgeReferences for &'a Csr<N, E, Ty, Ix>
             edge_ranges: self.row.windows(2).enumerate(),
             column: &self.column,
             edges: &self.edges,
-            iter: zip(&[], &[]),
+            iter: [].into_iter().zip([].into_iter()),
             ty: self.ty,
         }
     }
@@ -518,7 +516,7 @@ impl<'a, E, Ty, Ix> Iterator for EdgeReferences<'a, E, Ty, Ix>
             if let Some((i, w)) = self.edge_ranges.next() {
                 let a = w[0];
                 let b = w[1];
-                self.iter = zip(&self.column[a..b], &self.edges[a..b]);
+                self.iter = self.column[a..b].iter().zip(self.edges[a..b].iter());
                 self.source_index = Ix::new(i);
             } else {
                 return None;

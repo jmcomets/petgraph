@@ -60,7 +60,6 @@ mod iter_format;
 mod iter_utils;
 mod isomorphism;
 mod traits_graph;
-mod util;
 #[cfg(feature = "quickcheck")]
 mod quickcheck;
 #[cfg(feature = "serde-1")]

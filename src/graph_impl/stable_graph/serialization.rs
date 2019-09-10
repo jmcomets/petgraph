@@ -11,7 +11,6 @@ use crate::EdgeType;
 use crate::graph::Node;
 use crate::graph::{IndexType, Edge};
 use crate::stable_graph::StableGraph;
-use crate::util::rev;
 use crate::serde_utils::MappedSequenceVisitor;
 use crate::serde_utils::CollectSeqWithLength;
 use crate::serde_utils::{IntoSerializable, FromDeserialized};
@@ -182,7 +181,7 @@ impl<'a, N, E, Ty, Ix> FromDeserialized for StableGraph<N, E, Ty, Ix>
         // insert Nones for each hole
         let mut offset = node_holes.len();
         let node_bound = node_holes.len() + nodes.len();
-        for hole_pos in rev(node_holes) {
+        for hole_pos in node_holes.into_iter().rev() {
             offset -= 1;
             if hole_pos.index() >= node_bound {
                 Err(invalid_node_err(hole_pos.index(), node_bound))?;
