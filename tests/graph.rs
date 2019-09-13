@@ -16,6 +16,7 @@ use petgraph::algo::{
     is_cyclic_undirected,
     min_spanning_tree,
     is_isomorphic_matching,
+    TransitiveClosure,
     transitive_closure_dfs,
     transitive_closure_fw,
 };

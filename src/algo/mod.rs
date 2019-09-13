@@ -5,6 +5,8 @@
 //! the `Graph` type.
 
 pub mod dominators;
+mod floyd_warshall;
+pub use floyd_warshall::FloydWarshall;
 
 use std::collections::BinaryHeap;
 use std::cmp::min;
@@ -271,17 +273,21 @@ pub fn has_path_connecting<G>(g: G, from: G::NodeId, to: G::NodeId,
     })
 }
 
-pub struct TransitiveClosure<G: NodeIndexable> {
+pub trait TransitiveClosure<G: GraphBase> {
+    fn has_relation(&self, a: G::NodeId, b: G::NodeId) -> bool;
+}
+
+struct TransitiveClosureDFS<G> {
     g: G,
     n: usize,
     matrix: FixedBitSet,
 }
 
-impl<G: NodeIndexable> TransitiveClosure<G> {
-    pub fn new(g: G) -> TransitiveClosure<G> {
+impl<G: NodeIndexable> TransitiveClosureDFS<G> {
+    pub fn new(g: G) -> TransitiveClosureDFS<G> {
         let n = g.node_bound();
         let matrix = FixedBitSet::with_capacity(n * n);
-        TransitiveClosure { g, n, matrix }
+        TransitiveClosureDFS { g, n, matrix }
     }
 
     #[inline]
@@ -293,16 +299,18 @@ impl<G: NodeIndexable> TransitiveClosure<G> {
     fn add_relation(&mut self, a: G::NodeId, b: G::NodeId) {
         self.matrix.put(self.to_edge_index(a, b));
     }
+}
 
-    pub fn has_relation(&self, a: G::NodeId, b: G::NodeId) -> bool {
+impl<G: NodeIndexable> TransitiveClosure<G> for TransitiveClosureDFS<G> {
+    fn has_relation(&self, a: G::NodeId, b: G::NodeId) -> bool {
         self.matrix.contains(self.to_edge_index(a, b))
     }
 }
 
-pub fn transitive_closure_dfs<G>(g: G) -> TransitiveClosure<G>
-    where G: NodeIndexable + NodeCount + IntoNeighbors + IntoNodeIdentifiers + Visitable
+pub fn transitive_closure_dfs<G>(g: G) -> impl TransitiveClosure<G>
+    where G: NodeIndexable + IntoNeighbors + IntoNodeIdentifiers + Visitable
 {
-    let mut tc = TransitiveClosure::new(g);
+    let mut tc = TransitiveClosureDFS::new(g);
 
     let mut dfs = Dfs::empty(g);
 
@@ -321,37 +329,20 @@ pub fn transitive_closure_dfs<G>(g: G) -> TransitiveClosure<G>
     tc
 }
 
-pub fn transitive_closure_fw<G>(g: G) -> TransitiveClosure<G>
-    where G: NodeIndexable + IntoNeighbors + IntoNodeIdentifiers + IntoEdgeReferences
+struct TransitiveClosureFW<G>(FloydWarshall<G, bool>);
+
+impl<G> TransitiveClosure<G> for TransitiveClosureFW<G>
+    where G: NodeCompactIndexable + IntoNodeIdentifiers + IntoEdgeReferences
 {
-    let mut tc = TransitiveClosure::new(g);
-
-    // add direct edges
-    for edge in g.edge_references() {
-        tc.add_relation(edge.source(), edge.target());
+    fn has_relation(&self, a: G::NodeId, b: G::NodeId) -> bool {
+        self.0[(a, b)]
     }
+}
 
-    // add self loops
-    for node in g.node_identifiers() {
-        tc.add_relation(node, node);
-    }
-
-    for a in g.node_identifiers() {
-        for b in g.node_identifiers() {
-            if tc.has_relation(a, b) {
-                continue;
-            }
-
-            for c in g.node_identifiers() {
-                if tc.has_relation(a, c) && tc.has_relation(c, b) {
-                    tc.add_relation(a, b);
-                    break;
-                }
-            }
-        }
-    }
-
-    tc
+pub fn transitive_closure_fw<G>(g: G) -> impl TransitiveClosure<G>
+    where G: NodeCompactIndexable + IntoNodeIdentifiers + IntoEdgeReferences
+{
+    TransitiveClosureFW(FloydWarshall::transitive_closure(g))
 }
 
 /// Renamed to `kosaraju_scc`.
@@ -807,7 +798,7 @@ pub fn bellman_ford<G>(g: G, source: G::NodeId)
 
     let ix = |i| g.to_index(i);
 
-    distance[ix(source)] = <_>::zero();
+    distance[ix(source)] = FloatMeasure::zero();
     // scan up to |V| - 1 times.
     for _ in 1..g.node_count() {
         let mut did_update = false;
