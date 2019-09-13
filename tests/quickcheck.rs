@@ -37,6 +37,7 @@ use petgraph::algo::{
     dijkstra,
     bellman_ford,
     transitive_closure,
+    TransitiveClosure,
     has_path_connecting,
 };
 use petgraph::visit::{Topo, Reversed};
@@ -930,13 +931,23 @@ quickcheck! {
 quickcheck! {
     fn test_transitive_closure(gr: Graph<(), ()>) -> bool {
         let n = gr.node_count() as u32;
-        let tc = transitive_closure(&gr);
+        let tc1 = transitive_closure(&gr);
+        let tc2 = TransitiveClosure::using_matrix_graph(&gr);
+        let tc3 = TransitiveClosure::using_fixed_bitset(&gr);
 
         for col in 0..n {
             for row in 0..n {
-                if tc[(row * n + col) as usize] !=
-                    has_path_connecting(&gr, row.into(), col.into(), None)
-                {
+                let (a, b) = (row.into(), col.into())
+                let has_path = has_path_connecting(&gr, row, col, None);
+                if tc1[(row * n + col) as usize] != has_path {
+                    return false;
+                }
+
+                if tc2.has_relation(row, col) != has_path {
+                    return false;
+                }
+
+                if tc3.has_relation(row, col) != has_path {
                     return false;
                 }
             }

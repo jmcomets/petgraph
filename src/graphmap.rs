@@ -296,7 +296,7 @@ impl<N, E, Ty> GraphMap<N, E, Ty>
         let exist2 = if a != b {
             self.remove_single_edge(&b, &a, Incoming)
         } else { exist1 };
-        let weight = self.edges.remove(&Self::edge_key(a, b));
+        let weight = self.edges.swap_remove(&Self::edge_key(a, b));
         debug_assert!(exist1 == exist2 && exist1 == weight.is_some());
         weight
     }

@@ -17,6 +17,7 @@ use petgraph::algo::{
     min_spanning_tree,
     is_isomorphic_matching,
     transitive_closure,
+    TransitiveClosure,
 };
 
 use petgraph::graph::node_index as n;
@@ -1152,26 +1153,23 @@ fn test_has_path() {
 #[test]
 fn test_transitive_closure() {
     let expected = [
-        1, 1, 1, 1,
-        1, 1, 1, 1,
-        1, 1, 1, 1,
-        0, 0, 0, 1,
+        1, 1, 1, 1, 0,
+        1, 1, 1, 1, 0,
+        1, 1, 1, 1, 0,
+        0, 0, 0, 1, 0,
+        1, 1, 1, 1, 1,
     ];
 
-    let g = Graph::<(), ()>::from_edges(&[(0, 1), (0, 2), (1, 2), (2, 0), (2, 3)]);
-    let tc = transitive_closure(&g);
+    let g = Graph::<(), ()>::from_edges(&[(0, 1), (0, 2), (1, 2), (2, 0), (2, 3), (4, 0)]);
+    let tc1 = transitive_closure(&g);
+    let tc2 = TransitiveClosure::using_matrix_graph(&g);
+    let tc3 = TransitiveClosure::using_fixed_bitset(&g);
 
     for (i, v) in expected.iter().map(|&v| v == 1).enumerate() {
-        assert_eq!(v, tc[i]);
-    }
-
-    let n = g.node_count() as u32;
-
-    for col in 0..n {
-        for row in 0..n {
-            assert_eq!(tc[(row * n + col) as usize],
-                       has_path_connecting(&g, row.into(), col.into(), None));
-        }
+        let (a, b) = (i / g.node_count(), i % g.node_count());
+        assert_eq!(v, tc1[i], "for edge ({}, {})", a, b);
+        assert_eq!(v, tc2.has_relation(n(a), n(b)), "for edge ({}, {})", a, b);
+        assert_eq!(v, tc3.has_relation(n(a), n(b)), "for edge ({}, {})", a, b);
     }
 }
 
