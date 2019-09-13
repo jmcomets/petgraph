@@ -271,7 +271,7 @@ pub fn has_path_connecting<G>(g: G, from: G::NodeId, to: G::NodeId,
     })
 }
 
-pub struct TransitiveClosure<G: NodeIndexable> {
+pub struct TransitiveClosure<G> {
     g: G,
     n: usize,
     matrix: FixedBitSet,
@@ -300,7 +300,7 @@ impl<G: NodeIndexable> TransitiveClosure<G> {
 }
 
 pub fn transitive_closure_dfs<G>(g: G) -> TransitiveClosure<G>
-    where G: NodeIndexable + NodeCount + IntoNeighbors + IntoNodeIdentifiers + Visitable
+    where G: NodeIndexable + IntoNeighbors + IntoNodeIdentifiers + Visitable
 {
     let mut tc = TransitiveClosure::new(g);
 
@@ -321,37 +321,65 @@ pub fn transitive_closure_dfs<G>(g: G) -> TransitiveClosure<G>
     tc
 }
 
-pub fn transitive_closure_fw<G>(g: G) -> TransitiveClosure<G>
-    where G: NodeIndexable + IntoNeighbors + IntoNodeIdentifiers + IntoEdgeReferences
-{
-    let mut tc = TransitiveClosure::new(g);
 
-    // add direct edges
-    for edge in g.edge_references() {
-        tc.add_relation(edge.source(), edge.target());
+pub struct FloydWarshall<G> {
+    // g: G,
+    // n: usize,
+    // matrix: FixedBitSet,
+}
+
+impl<G: NodeIndexable> FloydWarshall<G> {
+    pub fn new(g: G) -> FloydWarshall<G> {
+        // let n = g.node_bound();
+        // let matrix = FixedBitSet::with_capacity(n * n);
+        // FloydWarshall { g, n, matrix }
+        unimplemented!()
     }
+}
+
+// Algorithm:
+//
+//   for i = 1 to n
+//       for j = 1 to n
+//           d[i][j] = { w(i, j) if (i, j) in E;
+//                       0       if i == j;
+//                       inf.    otherwise }
+//
+//   for k = 1 to n
+//       for i = 1 to n
+//           for j = 1 to n
+//               d[i][j] = min { d[i][j], d[i][k] + d[k][j] }
+//
+pub fn floyd_warshall<G>(g: G) -> FloydWarshall<G>
+    where G: NodeIndexable + IntoNodeIdentifiers + IntoEdgeReferences
+{
+    let mut fw = FloydWarshall::new(g);
 
     // add self loops
     for node in g.node_identifiers() {
         tc.add_relation(node, node);
     }
 
-    for a in g.node_identifiers() {
-        for b in g.node_identifiers() {
-            if tc.has_relation(a, b) {
-                continue;
-            }
+    for edge in g.edge_references() {
+        let (i, j) = (edge.source(), edge.target());
+        d[(i, j)] = edge.weight();
+    }
 
-            for c in g.node_identifiers() {
-                if tc.has_relation(a, c) && tc.has_relation(c, b) {
-                    tc.add_relation(a, b);
-                    break;
-                }
+    for link_node in g.node_identifiers() {
+        for source_node in g.node_identifiers() {
+            for target_node in g.node_identifiers() {
+                d[(i, j)] = min(d[(i, j)], d[(i, k)] + d[(k, j)])
             }
         }
     }
 
-    tc
+    fw
+}
+
+pub fn transitive_closure_fw<G>(g: G) -> TransitiveClosure<G>
+    where G: NodeIndexable + IntoNodeIdentifiers
+{
+    unimplemented!() // TODO use `floyd_warshall()` with a "bit-or" monoid
 }
 
 /// Renamed to `kosaraju_scc`.
