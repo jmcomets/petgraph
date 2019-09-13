@@ -16,8 +16,8 @@ use petgraph::algo::{
     is_cyclic_undirected,
     min_spanning_tree,
     is_isomorphic_matching,
-    transitive_closure,
-    TransitiveClosure,
+    transitive_closure_dfs,
+    transitive_closure_fw,
 };
 
 use petgraph::graph::node_index as n;
@@ -1161,15 +1161,13 @@ fn test_transitive_closure() {
     ];
 
     let g = Graph::<(), ()>::from_edges(&[(0, 1), (0, 2), (1, 2), (2, 0), (2, 3), (4, 0)]);
-    let tc1 = transitive_closure(&g);
-    let tc2 = TransitiveClosure::using_matrix_graph(&g);
-    let tc3 = TransitiveClosure::using_fixed_bitset(&g);
+    let tc1 = transitive_closure_dfs(&g);
+    let tc2 = transitive_closure_fw(&g);
 
     for (i, v) in expected.iter().map(|&v| v == 1).enumerate() {
         let (a, b) = (i / g.node_count(), i % g.node_count());
-        assert_eq!(v, tc1[i], "for edge ({}, {})", a, b);
+        assert_eq!(v, tc1.has_relation(n(a), n(b)), "for edge ({}, {})", a, b);
         assert_eq!(v, tc2.has_relation(n(a), n(b)), "for edge ({}, {})", a, b);
-        assert_eq!(v, tc3.has_relation(n(a), n(b)), "for edge ({}, {})", a, b);
     }
 }
 

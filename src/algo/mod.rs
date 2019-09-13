@@ -32,7 +32,6 @@ use super::visit::{
     IntoEdges,
     Reversed,
 };
-use crate::matrix_graph::MatrixGraph;
 use super::unionfind::UnionFind;
 use super::graph::{
     IndexType,
@@ -272,123 +271,87 @@ pub fn has_path_connecting<G>(g: G, from: G::NodeId, to: G::NodeId,
     })
 }
 
-/// [Generic] Compute the *transitive closure*.
-pub fn transitive_closure<G>(g: G) -> FixedBitSet
+pub struct TransitiveClosure<G: NodeIndexable> {
+    g: G,
+    n: usize,
+    matrix: FixedBitSet,
+}
+
+impl<G: NodeIndexable> TransitiveClosure<G> {
+    pub fn new(g: G) -> TransitiveClosure<G> {
+        let n = g.node_bound();
+        let matrix = FixedBitSet::with_capacity(n * n);
+        TransitiveClosure { g, n, matrix }
+    }
+
+    #[inline]
+    fn to_edge_index(&self, a: G::NodeId, b: G::NodeId) -> usize {
+        let (i, j) = (self.g.to_index(a), self.g.to_index(b));
+        i * self.n + j
+    }
+
+    fn add_relation(&mut self, a: G::NodeId, b: G::NodeId) {
+        self.matrix.put(self.to_edge_index(a, b));
+    }
+
+    pub fn has_relation(&self, a: G::NodeId, b: G::NodeId) -> bool {
+        self.matrix.contains(self.to_edge_index(a, b))
+    }
+}
+
+pub fn transitive_closure_dfs<G>(g: G) -> TransitiveClosure<G>
     where G: NodeIndexable + NodeCount + IntoNeighbors + IntoNodeIdentifiers + Visitable
 {
-    let n = g.node_count();
-    let mut matrix = FixedBitSet::with_capacity(n * n);
+    let mut tc = TransitiveClosure::new(g);
+
     let mut dfs = Dfs::empty(g);
 
     for node in g.node_identifiers() {
         dfs.reset(g);
         dfs.move_to(node);
-        let i = g.to_index(node);
-        matrix.put(i * n + i);
-        while let Some(visited) = dfs.next(g) {
-            let j = g.to_index(visited);
-            matrix.put(i * n + j);
-        }
-    }
-
-    matrix
-}
-
-pub enum TransitiveClosure<G: NodeIndexable> {
-    UsingFixedBitset {
-        g: G,
-        n: usize,
-        matrix: FixedBitSet,
-    },
-    UsingMatrixGraph {
-        g: G,
-        matrix: MatrixGraph<(), ()>,
-    }
-}
-
-impl<G: NodeIndexable> TransitiveClosure<G> {
-    pub fn using_fixed_bitset(g: G) -> TransitiveClosure<G>
-        where G: IntoNeighbors + IntoNodeIdentifiers + IntoEdgeReferences
-    {
-        let n = g.node_bound();
-        let matrix = FixedBitSet::with_capacity(n * n);
-        TransitiveClosure::UsingFixedBitset { g, n, matrix }.run(g)
-    }
-
-    pub fn using_matrix_graph(g: G) -> TransitiveClosure<G>
-        where G: IntoNeighbors + IntoNodeIdentifiers + IntoEdgeReferences
-    {
-        let n = g.node_bound();
-
-        let mut matrix = MatrixGraph::with_nodes(n);
-        for _ in 0..n {
-            let node = matrix.add_node(());
-            matrix.add_edge(node, node, ());
-        }
-
-        TransitiveClosure::UsingMatrixGraph { g, matrix }.run(g)
-    }
-
-    fn run(mut self, g: G) -> Self
-        where G: IntoNeighbors + IntoNodeIdentifiers + IntoEdgeReferences
-    {
-        // add direct edges
-        for edge in g.edge_references() {
-            self.add_relation(edge.source(), edge.target());
-        }
 
         // add self loops
-        for node in g.node_identifiers() {
-            self.add_relation(node, node);
-        }
+        tc.add_relation(node, node);
 
-        for a in g.node_identifiers() {
-            for b in g.node_identifiers() {
-                if self.has_relation(a, b) {
-                    continue;
+        while let Some(visited) = dfs.next(g) {
+            tc.add_relation(node, visited);
+        }
+    }
+
+    tc
+}
+
+pub fn transitive_closure_fw<G>(g: G) -> TransitiveClosure<G>
+    where G: NodeIndexable + IntoNeighbors + IntoNodeIdentifiers + IntoEdgeReferences
+{
+    let mut tc = TransitiveClosure::new(g);
+
+    // add direct edges
+    for edge in g.edge_references() {
+        tc.add_relation(edge.source(), edge.target());
+    }
+
+    // add self loops
+    for node in g.node_identifiers() {
+        tc.add_relation(node, node);
+    }
+
+    for a in g.node_identifiers() {
+        for b in g.node_identifiers() {
+            if tc.has_relation(a, b) {
+                continue;
+            }
+
+            for c in g.node_identifiers() {
+                if tc.has_relation(a, c) && tc.has_relation(c, b) {
+                    tc.add_relation(a, b);
+                    break;
                 }
-
-                for c in g.node_identifiers() {
-                    if self.has_relation(a, c) && self.has_relation(c, b) {
-                        self.add_relation(a, b);
-                        break;
-                    }
-                }
-            }
-        }
-
-        self
-    }
-
-    fn add_relation(&mut self, a: G::NodeId, b: G::NodeId) {
-        use TransitiveClosure::*;
-        match self {
-            UsingFixedBitset { g, n, matrix } => {
-                let (i, j) = (g.to_index(a), g.to_index(b));
-                matrix.put(i * (*n) + j);
-            }
-            UsingMatrixGraph { g, matrix } => {
-                let a = matrix.from_index(g.to_index(a));
-                let b = matrix.from_index(g.to_index(b));
-                matrix.update_edge(a, b, ());
             }
         }
     }
 
-    pub fn has_relation(&self, a: G::NodeId, b: G::NodeId) -> bool {
-        use TransitiveClosure::*;
-        match self {
-            UsingFixedBitset { g, n, matrix } => {
-                let (i, j) = (g.to_index(a), g.to_index(b));
-                matrix.contains(i * n + j)
-            }
-            UsingMatrixGraph { g, matrix } => {
-                let a = matrix.from_index(g.to_index(a));
-                let b = matrix.from_index(g.to_index(b));
-                matrix.has_edge(a, b)
-            }
-        }
-    }
+    tc
 }
 
 /// Renamed to `kosaraju_scc`.
