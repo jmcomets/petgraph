@@ -75,6 +75,10 @@ pub trait Nullable: Default + Into<Option<<Self as Nullable>::Wrapped>> + privat
     fn as_mut(&mut self) -> Option<&mut Self::Wrapped>;
 
     #[doc(hidden)]
+    fn get_or_insert_with<F>(&mut self, default: F) -> &mut Self::Wrapped
+        where F: FnOnce() -> Self::Wrapped;
+
+    #[doc(hidden)]
     fn is_null(&self) -> bool {
         self.as_ref().is_none()
     }
@@ -94,6 +98,13 @@ impl<T> Nullable for Option<T> {
     fn as_mut(&mut self) -> Option<&mut Self::Wrapped> {
         self.as_mut()
     }
+
+    fn get_or_insert_with<F>(&mut self, default: F) -> &mut Self::Wrapped
+        where F: FnOnce() -> Self::Wrapped
+    {
+        self.get_or_insert_with(default)
+    }
+
 }
 
 /// `NotZero` is used to optimize the memory usage of edge weights `E` in a
@@ -132,6 +143,15 @@ impl<T: Zero> Nullable for NotZero<T> {
     fn as_mut(&mut self) -> Option<&mut Self::Wrapped> {
         if !self.is_null() { Some(&mut self.0) }
         else { None }
+    }
+
+    fn get_or_insert_with<F>(&mut self, default: F) -> &mut Self::Wrapped
+        where F: FnOnce() -> Self::Wrapped
+    {
+        if self.is_null() {
+            self.0 = default();
+        }
+        &mut self.0
     }
 }
 
@@ -352,6 +372,20 @@ impl<N, E, Ty: EdgeType, Null: Nullable<Wrapped=E>, Ix: IndexType> MatrixGraph<N
             self.nb_edges += 1;
         }
         old_weight.into()
+    }
+
+    pub fn update_edge_with<F>(&mut self, a: NodeIndex<Ix>, b: NodeIndex<Ix>, default: F) -> &mut E
+        where F: FnOnce() -> E
+    {
+        self.extend_capacity_for_edge(a, b);
+
+        let p = self.to_edge_position(a, b);
+        let ref mut nb_edges = self.nb_edges;
+        self.node_adjacencies[p]
+            .get_or_insert_with(|| {
+                *nb_edges += 1;
+                default()
+            })
     }
 
     /// Add an edge from `a` to `b` to the graph, with its associated
