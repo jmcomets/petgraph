@@ -1013,6 +1013,30 @@ impl<N, E, Ty: EdgeType, Null: Nullable<Wrapped=E>, Ix: IndexType> IndexMut<Node
     }
 }
 
+/// Index the `MatrixGraph` by `NodeIndex` pair to access edge weights.
+///
+/// Also available with indexing syntax: `&graph[e]`.
+///
+/// **Panics** if no edge exists between `a` and `b`.
+impl<N, E, Ty: EdgeType, Null: Nullable<Wrapped=E>, Ix: IndexType> Index<(NodeIndex<Ix>, NodeIndex<Ix>)> for MatrixGraph<N, E, Ty, Null, Ix> {
+    type Output = E;
+
+    fn index(&self, (ax, bx): (NodeIndex<Ix>, NodeIndex<Ix>)) -> &E {
+        self.edge_weight(ax, bx)
+    }
+}
+
+/// Index the `MatrixGraph` by `NodeIndex` pair to access edge weights.
+///
+/// Also available with indexing syntax: `&mut graph[e]`.
+///
+/// **Panics** if no edge exists between `a` and `b`.
+impl<N, E, Ty: EdgeType, Null: Nullable<Wrapped=E>, Ix: IndexType> IndexMut<(NodeIndex<Ix>, NodeIndex<Ix>)> for MatrixGraph<N, E, Ty, Null, Ix> {
+    fn index_mut(&mut self, (ax, bx): (NodeIndex<Ix>, NodeIndex<Ix>)) -> &mut E {
+        self.edge_weight_mut(ax, bx)
+    }
+}
+
 impl<N, E, Ty: EdgeType, Null: Nullable<Wrapped=E>, Ix: IndexType> NodeCount for MatrixGraph<N, E, Ty, Null, Ix> {
     fn node_count(&self) -> usize {
         MatrixGraph::node_count(self)
