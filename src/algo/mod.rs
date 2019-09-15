@@ -334,48 +334,47 @@ pub fn transitive_closure_dfs<G>(g: G) -> TransitiveClosure<G>
 }
 
 pub fn transitive_closure_fw<G>(g: G) -> TransitiveClosure<G>
-    where G: NodeCompactIndexable + IntoNodeIdentifiers + IntoEdgeReferences + IntoNeighbors
+    where G: NodeIndexable + IntoNeighbors + IntoNodeIdentifiers
 {
     let mut tc = TransitiveClosure::new(g);
 
-    // add all edges
-    for edge in g.edge_references() {
-        tc.add_relation(edge.source(), edge.target());
+    // Add all edges
+    for source in g.node_identifiers() {
+        for target in g.neighbors(source) {
+            tc.add_relation(source, target);
+        }
     }
 
-    // add self loops
+    // Once the initial relations have been set, the graph is no longer needed.
     let n = g.node_bound();
+
+    // Set all diagonals. Note: since we didn't use `NodeCount` here, we may be adding invalid self
+    // loops. This won't cause issues as long as we don't iterate over these relations.
     let mut diagonal = 0;
     for _ in 0..n {
         tc.set_edge_index(diagonal);
-        diagonal += n + 1;
+        diagonal += n+1;
     }
-    // equivalent, but slower: `(0..n*n).step_by(n+1)`
 
-    // run
-    for link in g.node_identifiers() {
-        for source in g.node_identifiers() {
-            if !tc.has_relation(source, link) || source == link {
-                continue;
-            }
-
-            // TODO run this search in parallel using SIMD
-            let mut i = g.to_index(link) * n;
-            for target in g.node_identifiers() {
-                if tc.is_edge_index_set(i) {
-                    tc.add_relation(source, target);
+    // Try to use `k` as a link between `i` and `j`.
+    //
+    // `k0` & `i0` are the initial indices for the relations of nodes `k` & `i`.
+    let mut k0 = 0;
+    for k in 0..n {
+        let mut i0 = 0;
+        for _i in 0..n {
+            if tc.is_edge_index_set(i0 + k) {
+                for j in 0..n {
+                    if tc.is_edge_index_set(k0 + j) {
+                        tc.set_edge_index(i0 + j);
+                    }
                 }
-                i += 1;
             }
-            // equivalent, but slower:
-            //
-            // for target in g.node_identifiers() {
-            //     if tc.has_relation(link, target) {
-            //         tc.add_relation(source, target);
-            //     }
-            // }
 
+            i0 += n;
         }
+
+        k0 += n;
     }
 
     tc
