@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
 use petgraph::prelude::*;
+use petgraph::matrix_graph::MatrixGraph;
 use petgraph::visit::NodeIndexable;
 use petgraph::data::Build;
 
@@ -226,6 +227,8 @@ impl<Ty, G> GraphFactory<Ty, G>
     }
 }
 
+// Graph
+
 pub fn graph<Ty: EdgeType>() -> GraphFactory<Ty, Graph<(), (), Ty>> {
     GraphFactory::new()
 }
@@ -238,6 +241,8 @@ pub fn digraph() -> GraphFactory<Directed, Graph<(), (), Directed>> {
     graph()
 }
 
+// StableGraph
+
 pub fn stable_graph<Ty: EdgeType>() -> GraphFactory<Ty, StableGraph<(), (), Ty>> {
     GraphFactory::new()
 }
@@ -248,4 +253,18 @@ pub fn stable_ungraph() -> GraphFactory<Undirected, StableGraph<(), (), Undirect
 
 pub fn stable_digraph() -> GraphFactory<Directed, StableGraph<(), (), Directed>> {
     stable_graph()
+}
+
+// MatrixGraph
+
+pub fn matrix_graph<Ty: EdgeType>() -> GraphFactory<Ty, MatrixGraph<(), (), Ty>> {
+    GraphFactory::new()
+}
+
+pub fn unmatrix() -> GraphFactory<Undirected, MatrixGraph<(), (), Undirected>> {
+    matrix_graph()
+}
+
+pub fn dimatrix() -> GraphFactory<Directed, MatrixGraph<(), (), Directed>> {
+    matrix_graph()
 }

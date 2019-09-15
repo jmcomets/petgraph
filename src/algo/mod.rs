@@ -5,8 +5,6 @@
 //! the `Graph` type.
 
 pub mod dominators;
-mod floyd_warshall;
-pub use floyd_warshall::FloydWarshall;
 
 use std::collections::BinaryHeap;
 use std::cmp::min;
@@ -273,21 +271,25 @@ pub fn has_path_connecting<G>(g: G, from: G::NodeId, to: G::NodeId,
     })
 }
 
-pub trait TransitiveClosure<G: GraphBase> {
-    fn has_relation(&self, a: G::NodeId, b: G::NodeId) -> bool;
-}
-
-struct TransitiveClosureDFS<G> {
+pub struct TransitiveClosure<G> {
     g: G,
     n: usize,
     matrix: FixedBitSet,
 }
 
-impl<G: NodeIndexable> TransitiveClosureDFS<G> {
-    pub fn new(g: G) -> TransitiveClosureDFS<G> {
+impl<G: NodeIndexable> TransitiveClosure<G> {
+    pub fn new(g: G) -> TransitiveClosure<G> {
         let n = g.node_bound();
         let matrix = FixedBitSet::with_capacity(n * n);
-        TransitiveClosureDFS { g, n, matrix }
+        TransitiveClosure { g, n, matrix }
+    }
+
+    pub fn has_relation(&self, a: G::NodeId, b: G::NodeId) -> bool {
+        self.is_edge_index_set(self.to_edge_index(a, b))
+    }
+
+    fn add_relation(&mut self, a: G::NodeId, b: G::NodeId) {
+        self.set_edge_index(self.to_edge_index(a, b));
     }
 
     #[inline]
@@ -296,21 +298,21 @@ impl<G: NodeIndexable> TransitiveClosureDFS<G> {
         i * self.n + j
     }
 
-    fn add_relation(&mut self, a: G::NodeId, b: G::NodeId) {
-        self.matrix.put(self.to_edge_index(a, b));
+    #[inline]
+    fn set_edge_index(&mut self, i: usize) {
+        self.matrix.put(i);
+    }
+
+    #[inline]
+    fn is_edge_index_set(&self, i: usize) -> bool {
+        self.matrix.contains(i)
     }
 }
 
-impl<G: NodeIndexable> TransitiveClosure<G> for TransitiveClosureDFS<G> {
-    fn has_relation(&self, a: G::NodeId, b: G::NodeId) -> bool {
-        self.matrix.contains(self.to_edge_index(a, b))
-    }
-}
-
-pub fn transitive_closure_dfs<G>(g: G) -> impl TransitiveClosure<G>
+pub fn transitive_closure_dfs<G>(g: G) -> TransitiveClosure<G>
     where G: NodeIndexable + IntoNeighbors + IntoNodeIdentifiers + Visitable
 {
-    let mut tc = TransitiveClosureDFS::new(g);
+    let mut tc = TransitiveClosure::new(g);
 
     let mut dfs = Dfs::empty(g);
 
@@ -329,20 +331,52 @@ pub fn transitive_closure_dfs<G>(g: G) -> impl TransitiveClosure<G>
     tc
 }
 
-struct TransitiveClosureFW<G>(FloydWarshall<G, bool>);
-
-impl<G> TransitiveClosure<G> for TransitiveClosureFW<G>
-    where G: NodeCompactIndexable + IntoNodeIdentifiers + IntoEdgeReferences
+pub fn transitive_closure_fw<G>(g: G) -> TransitiveClosure<G>
+    where G: NodeCompactIndexable + IntoNodeIdentifiers + IntoEdgeReferences + IntoNeighbors
 {
-    fn has_relation(&self, a: G::NodeId, b: G::NodeId) -> bool {
-        self.0[(a, b)]
+    let mut tc = TransitiveClosure::new(g);
+
+    // add all edges
+    for edge in g.edge_references() {
+        tc.add_relation(edge.source(), edge.target());
     }
-}
 
-pub fn transitive_closure_fw<G>(g: G) -> impl TransitiveClosure<G>
-    where G: NodeCompactIndexable + IntoNodeIdentifiers + IntoEdgeReferences
-{
-    TransitiveClosureFW(FloydWarshall::transitive_closure(g))
+    // add self loops
+    let n = g.node_bound();
+    let mut diagonal = 0;
+    for _ in 0..n {
+        tc.set_edge_index(diagonal);
+        diagonal += n + 1;
+    }
+    // equivalent, but slower: `(0..n*n).step_by(n+1)`
+
+    // run
+    for link in g.node_identifiers() {
+        for source in g.node_identifiers() {
+            if !tc.has_relation(source, link) || source == link {
+                continue;
+            }
+
+            // TODO run this search in parallel using SIMD
+            let mut i = g.to_index(link) * n;
+            for target in g.node_identifiers() {
+                if tc.is_edge_index_set(i) {
+                    tc.add_relation(source, target);
+                }
+                i += 1;
+            }
+            // equivalent, but slower:
+            //
+            // for target in g.node_identifiers() {
+            //     if tc.has_relation(link, target) {
+            //         tc.add_relation(source, target);
+            //     }
+            // }
+
+        }
+    }
+
+    tc
 }
 
 /// Renamed to `kosaraju_scc`.
