@@ -49,6 +49,8 @@ pub use super::isomorphism::{
 pub use super::dijkstra::dijkstra;
 pub use super::astar::astar;
 
+use crate::matrix_graph::MatrixGraph;
+
 /// \[Generic\] Return the number of connected components of the graph.
 ///
 /// For a directed graph, this is the *weakly* connected components.
@@ -377,6 +379,48 @@ pub fn transitive_closure_fw<G>(g: G) -> TransitiveClosure<G>
     }
 
     tc
+}
+
+pub fn floyd_warshall<G, M>(g: G) -> MatrixGraph<(), M>
+    where G: NodeCompactIndexable + IntoNodeIdentifiers + IntoEdgeReferences + Data<EdgeWeight=M>,
+          M: FloatMeasure,
+{
+    let n = g.node_count();
+    let mut matrix = MatrixGraph::with_capacity(n);
+    for _ in 0..n {
+        let _ = matrix.add_node(());
+    }
+
+    // initialize edge weights
+    for source in (0..n).map(NodeIndex::new) {
+        for target in (0..n).map(NodeIndex::new) {
+            let weight = if source != target { M::infinite() } else { M::zero() };
+            matrix.add_edge(source, target, weight);
+        }
+    }
+
+    // set known weights
+    for edge in g.edge_references() {
+        let source = matrix.from_index(g.to_index(edge.source()));
+        let target = matrix.from_index(g.to_index(edge.target()));
+        let weight = edge.weight().clone();
+        let _ = matrix.update_edge(source, target, weight);
+    }
+
+    // run
+    for link in (0..n).map(NodeIndex::new) {
+        for source in (0..n).map(NodeIndex::new) {
+            for target in (0..n).map(NodeIndex::new) {
+                let new = matrix[(source, link)] + matrix[(link, target)];
+                let ref mut current = matrix[(source, target)];
+                if new < *current {
+                    *current = new;
+                }
+            }
+        }
+    }
+
+    matrix
 }
 
 /// Renamed to `kosaraju_scc`.
