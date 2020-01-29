@@ -98,7 +98,7 @@ mod test {
     use core::iter::FromIterator;
 
     #[cfg(not(feature = "alloc"))]
-    use std::{collections::HashSet, iter::FromIterator};
+    use std::{collections::HashSet};
 
     #[cfg(feature = "alloc")]
     use alloc::{collections::BTreeSet as HashSet, vec::Vec};
@@ -106,6 +106,9 @@ mod test {
     use itertools::assert_equal;
 
     use crate::prelude::DiGraph;
+
+    #[cfg(not(feature = "no_std"))]
+    use crate::dot::Dot;
 
     use super::all_simple_paths;
 
