@@ -2051,6 +2051,40 @@ fn dfs_visit() {
 }
 
 #[test]
+fn dfs_visit_with_result() {
+    use petgraph::visit::{DfsEvent::*, depth_first_search};
+
+    let gr: Graph<(), ()> = Graph::from_edges(&[
+        (0, 2),
+        (0, 3),
+        (0, 1),
+        (1, 3),
+        (2, 3),
+        (2, 4),
+        (4, 0),
+    ]);
+
+    // find path from 0 to 4
+    let mut predecessors = vec![NodeIndex::end(); gr.node_count()];
+    let start = n(0);
+    let predecessor = n(2);
+    let goal = n(4);
+    let ret = depth_first_search(&gr, Some(start), |event| {
+        if let TreeEdge(u, v) = event {
+            predecessors[v.index()] = u;
+            if v == goal {
+                return Err(u);
+            }
+        }
+        Ok(())
+    });
+
+    // assert we did terminate early
+    assert_eq!(ret, Err(predecessor));
+    assert!(predecessors.iter().any(|x| *x == NodeIndex::end()));
+}
+
+#[test]
 fn filtered_post_order() {
     use petgraph::visit::NodeFiltered;
 
