@@ -781,17 +781,17 @@ impl<'a, N, E, Ty, Null: Nullable<Wrapped=E>, Ix> Entry<'a, N, E, Ty, Null, Ix>
     where Ix: IndexType,
           Ty: EdgeType
 {
-    pub fn or_default(&mut self) -> &mut E
+    pub fn or_default(self) -> &'a mut E
         where E: Default
     {
         self.or_insert_with(Default::default)
     }
 
-    pub fn or_insert(&mut self, weight: E) -> &mut E {
+    pub fn or_insert(self, weight: E) -> &'a mut E {
         self.or_insert_with(|| weight)
     }
 
-    pub fn or_insert_with<F>(&mut self, default: F) -> &mut E
+    pub fn or_insert_with<F>(self, default: F) -> &'a mut E
         where F: FnOnce() -> E
     {
         self.graph.extend_capacity_for_edge(self.a, self.b);
