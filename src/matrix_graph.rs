@@ -374,18 +374,8 @@ impl<N, E, Ty: EdgeType, Null: Nullable<Wrapped=E>, Ix: IndexType> MatrixGraph<N
         old_weight.into()
     }
 
-    pub fn update_edge_with<F>(&mut self, a: NodeIndex<Ix>, b: NodeIndex<Ix>, default: F) -> &mut E
-        where F: FnOnce() -> E
-    {
-        self.extend_capacity_for_edge(a, b);
-
-        let p = self.to_edge_position(a, b);
-        let ref mut nb_edges = self.nb_edges;
-        self.node_adjacencies[p]
-            .get_or_insert_with(|| {
-                *nb_edges += 1;
-                default()
-            })
+    pub fn edge_entry(&mut self, a: NodeIndex<Ix>, b: NodeIndex<Ix>) -> Entry<N, E, Ty, Null, Ix> {
+        Entry { graph: self, a, b }
     }
 
     /// Add an edge from `a` to `b` to the graph, with its associated
@@ -778,6 +768,41 @@ impl<'a, Ty: EdgeType, Null: Nullable, Ix: IndexType> Iterator for Edges<'a, Ty,
                 return Some((NodeIndex::new(a), NodeIndex::new(b), e));
             }
         }
+    }
+}
+
+pub struct Entry<'a, N, E, Ty, Null: Nullable<Wrapped=E>, Ix> {
+    graph: &'a mut MatrixGraph<N, E, Ty, Null, Ix>,
+    a: NodeIndex<Ix>,
+    b: NodeIndex<Ix>,
+}
+
+impl<'a, N, E, Ty, Null: Nullable<Wrapped=E>, Ix> Entry<'a, N, E, Ty, Null, Ix>
+    where Ix: IndexType,
+          Ty: EdgeType
+{
+    pub fn or_default(&mut self) -> &mut E
+        where E: Default
+    {
+        self.or_insert_with(Default::default)
+    }
+
+    pub fn or_insert(&mut self, weight: E) -> &mut E {
+        self.or_insert_with(|| weight)
+    }
+
+    pub fn or_insert_with<F>(&mut self, default: F) -> &mut E
+        where F: FnOnce() -> E
+    {
+        self.graph.extend_capacity_for_edge(self.a, self.b);
+
+        let p = self.graph.to_edge_position(self.a, self.b);
+        let ref mut nb_edges = self.graph.nb_edges;
+        self.graph.node_adjacencies[p]
+            .get_or_insert_with(|| {
+                *nb_edges += 1;
+                default()
+            })
     }
 }
 
